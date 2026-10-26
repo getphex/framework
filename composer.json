@@ -54,7 +54,9 @@
         "generate": [
             "@php bin/phex build examples/compiled-container/container.php",
             "@php bin/phex build tests/Build/failing-application.php",
-            "@php bin/phex build tests/Build/failing-request.php"
+            "@php bin/phex build tests/Build/failing-request.php",
+            "@php bin/phex build tests/Build/compiled-routing.php",
+            "@php bin/phex build tests/Build/empty-routing.php"
         ],
         "analyse:phpstan": "tools/phpstan/vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress",
         "test:build": "phpunit --testsuite Build",
