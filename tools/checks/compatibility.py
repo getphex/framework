@@ -81,21 +81,25 @@ def main() -> int:
 
         print(f"Compatibility verified: {len(php_cases)} shared cases passed on PHP and ElephC.")
 
-        example = ROOT / "examples/hello-world/main.php"
-        source = reports / "example.php"
-        escaped_path = str(example).replace("\\", "\\\\").replace("'", "\\'")
-        source.write_text("<?php\nrequire '" + escaped_path + "';\n", encoding="utf-8")
-        compiled = subprocess.run(["elephc", "--strict-php", str(source)], cwd=ROOT, check=False)
-        if compiled.returncode != 0:
-            return 1
-        php_example = subprocess.run(["php", str(example)], cwd=ROOT, capture_output=True, check=False)
-        native_example = subprocess.run([str(source.with_suffix(""))], cwd=ROOT, capture_output=True, check=False)
-        expected = b'{"hello":"world"}\n'
-        for name, result in (("PHP", php_example), ("ElephC", native_example)):
-            if result.returncode != 0 or result.stdout != expected or result.stderr:
-                print(f"{name} example failed: {result}", file=sys.stderr)
+        examples = (
+            ("hello-world", b'{"hello":"world"}\n'),
+            ("json-api", b'200 {"status":"ok"}\n200 {"id":42}\n404 Not Found\n405 Method Not Allowed\n'),
+        )
+        for slug, expected in examples:
+            example = ROOT / "examples" / slug / "main.php"
+            source = reports / (slug + ".php")
+            escaped_path = str(example).replace("\\", "\\\\").replace("'", "\\'")
+            source.write_text("<?php\nrequire '" + escaped_path + "';\n", encoding="utf-8")
+            compiled = subprocess.run(["elephc", "--strict-php", str(source)], cwd=ROOT, check=False)
+            if compiled.returncode != 0:
                 return 1
-        print("JSON example verified on PHP and ElephC.")
+            php_example = subprocess.run(["php", str(example)], cwd=ROOT, capture_output=True, check=False)
+            native_example = subprocess.run([str(source.with_suffix(""))], cwd=ROOT, capture_output=True, check=False)
+            for name, result in (("PHP", php_example), ("ElephC", native_example)):
+                if result.returncode != 0 or result.stdout != expected or result.stderr:
+                    print(f"{name} example {slug} failed: {result}", file=sys.stderr)
+                    return 1
+            print(f"Example {slug} verified on PHP and ElephC.")
         return 0
 
 

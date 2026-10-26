@@ -32,11 +32,12 @@
 
 ## Overview
 
-Phex is in its first implementation increment. The HTTP core provides immutable
+Phex is in its initial implementation increments. The HTTP core provides immutable
 requests, responses, and headers, typed handler and middleware contracts, and an
 explicit middleware pipeline. Shared sources run directly on PHP and compile with
 ElephC. Generic PHPDoc annotations specialize the pipeline assembly method while
-the runtime pipeline exposes the shared handler contract.
+the runtime pipeline exposes the shared handler contract. Routing adds immutable
+definitions, a replaceable matcher, and explicit path parameter conversion.
 
 ## Requirements
 
@@ -88,7 +89,7 @@ reused; their implementations must keep request data in local variables.
 
 `Request` and `Response` expose readonly properties and return new instances from
 their `with*` methods. Bodies are currently in-memory strings and preserve binary
-bytes. Streams, transport adapters, routing, request scopes, and the build tool are
+bytes. Streams, transport adapters, request scopes, and the build tool are
 subsequent increments.
 
 `Headers` accepts a map of names to nonempty lists of string values. Names are
@@ -101,6 +102,62 @@ Request methods preserve their case. Request URIs preserve their encoded form an
 reject empty values, whitespace, controls, and fragments. This is basic validation,
 not a full URI parser. Response status codes must be between 100 and 599.
 
+## Route requests
+
+```php
+use Phex\Examples\JsonApi\HealthEndpoint;
+use Phex\Examples\JsonApi\UserEndpoint;
+use Phex\Routing\Definition\Route;
+use Phex\Routing\Matcher\TableMatcher;
+use Phex\Routing\Router;
+
+$router = new Router(new TableMatcher([
+    new Route('GET', '/health', new HealthEndpoint()),
+    new Route('GET', '/users/{id}', new UserEndpoint()),
+]));
+```
+
+`Router` implements the existing HTTP `Handler` contract and can be the terminal
+handler of a middleware pipeline. Routing endpoints implement
+`Phex\Contracts\Routing\Endpoint`; they receive both `Request` and an immutable
+`Parameters` object. Route parameters stay separate from the HTTP message.
+
+`TableMatcher` parses and orders patterns at construction. A future generated
+matcher can implement the same `Matcher` contract. Definitions use full-segment
+placeholders such as `{id}`; names are ASCII identifiers and must be unique within
+a pattern. Repeated structural patterns for the same method are rejected, even
+when their placeholder names differ.
+
+Among routes supporting the requested method, literal segments take precedence
+over parameters at the first differing segment. A static route for another method
+does not hide a compatible parameterized route. Methods and paths are case-sensitive.
+`HEAD` and `OPTIONS` currently require explicit definitions.
+
+The matcher accepts origin-form request targets (`/path?query`). Query strings are
+ignored. Request paths are split before each segment is percent-decoded exactly
+once: `a%2Fb` remains one parameter with value `a/b`, `%252F` becomes `%2F`, and `+`
+remains `+`. Patterns use decoded literals. Empty segments, trailing slashes, and
+dot segments remain significant; placeholders match one nonempty segment.
+Malformed escapes and decoded control bytes produce `400`.
+
+Missing paths produce `404`. A matching path without a compatible method produces
+`405` with unique, lexicographically sorted methods in `Allow`.
+
+Use `$parameters->get('id')` for a string or `$parameters->integer('id')` for a
+checked signed decimal integer. Integer conversion accepts leading zeros, rejects
+nondecimal syntax and overflow, and raises `InvalidParameter`, which the router
+maps to `400`. A missing parameter raises `OutOfBoundsException`; unexpected
+application exceptions propagate.
+
+For a custom conversion, `Parameters::map` has a generic PHPDoc return type:
+
+```php
+$name = $parameters->map('name', fn (string $raw): string => strtoupper($raw));
+```
+
+Run the routing example with `php examples/json-api/main.php`. It demonstrates a
+health endpoint, an integer user parameter, a missing path, and a rejected method.
+
 ## Test both runtimes
 
 ```sh
@@ -111,7 +168,7 @@ The command runs the same PHPUnit cases under PHP and under `elephc test` with
 `--strict-php`. It compares JUnit test identities and outcomes, fails on missing
 cases or any failed or skipped case, and removes temporary reports on exit.
 Both toolchains are required; a missing native compiler fails the command. It also
-compiles and runs the JSON example and checks its output against PHP.
+compiles and runs both examples and checks their output against PHP.
 
 For a single runtime:
 
@@ -121,5 +178,5 @@ composer test:elephc
 ```
 
 The shared cases cover header validation and immutability, middleware order and
-short-circuiting, retries, reuse after an exception, interleaved Fiber requests,
-and the JSON example.
+short-circuiting, retries, reuse after an exception, routing precedence, path
+encoding, parameter conversions, interleaved Fiber requests, and both examples.
