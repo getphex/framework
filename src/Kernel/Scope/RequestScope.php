@@ -11,12 +11,15 @@ use Throwable;
 
 final class RequestScope
 {
-    /** @var list<ScopeResource> */
-    private array $resources = [];
+    private readonly ResourceScope $resources;
 
-    private bool $closed = false;
+    /** @var list<ScopeContext> */
+    private array $contexts = [];
 
-    public function __construct(public readonly Request $request) {}
+    public function __construct(public readonly Request $request)
+    {
+        $this->resources = new ResourceScope();
+    }
 
     /**
      * @template TResource of ScopeResource
@@ -25,60 +28,58 @@ final class RequestScope
      */
     public function own(ScopeResource $resource): ScopeResource
     {
-        if ($this->closed) {
-            throw new LogicException('Cannot register resources in a closed request scope.');
-        }
-
-        foreach ($this->resources as $existing) {
-            if ($resource === $existing) {
-                return $resource;
-            }
-        }
-
-        $this->resources[] = $resource;
-
-        return $resource;
+        return $this->resources->own($resource);
     }
 
     public function isClosed(): bool
     {
-        return $this->closed;
+        return $this->resources->isClosed();
+    }
+
+    /** @internal Retrieve a container-specific context without retaining request state in the container. */
+    public function context(object $owner): ?ScopeResource
+    {
+        $this->assertOpen();
+        foreach ($this->contexts as $value) {
+            $context = self::typedContext($value);
+            if ($context->owner === $owner) {
+                return $context->value;
+            }
+        }
+
+        return null;
+    }
+
+    /** @internal Bind one context per container identity for this request. */
+    public function bindContext(object $owner, ScopeResource $context): void
+    {
+        if ($this->context($owner) !== null) {
+            throw new LogicException('A context is already bound to this request scope.');
+        }
+        $this->resources->own($context);
+        $this->contexts[] = new ScopeContext($owner, $context);
     }
 
     public function close(?Throwable $requestFailure = null): void
     {
-        if ($this->closed) {
-            return;
+        try {
+            $this->resources->close($requestFailure);
+        } finally {
+            $this->contexts = [];
         }
-
-        $this->closed = true;
-        $resources = $this->resources;
-        $this->resources = [];
-
-        if ($resources === []) {
-            return;
-        }
-
-        $errors = new CleanupErrors();
-
-        for ($index = count($resources) - 1; $index >= 0; $index--) {
-            $resource = self::resource($resources[$index]);
-
-            try {
-                $resource->close();
-            } catch (Throwable $error) {
-                $errors->add($error);
-            }
-        }
-
-        $errors->throwIfAny($requestFailure);
     }
 
-    private static function resource(mixed $value): ScopeResource
+    private function assertOpen(): void
     {
-        // ElephC may box objects read from a stored PHP array.
-        if (!$value instanceof ScopeResource) {
-            throw new LogicException('Invalid resource in the request scope.');
+        if ($this->isClosed()) {
+            throw new LogicException('The request scope is closed.');
+        }
+    }
+
+    private static function typedContext(mixed $value): ScopeContext
+    {
+        if (!$value instanceof ScopeContext) {
+            throw new LogicException('Invalid request context.');
         }
 
         return $value;

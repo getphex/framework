@@ -6,6 +6,7 @@ namespace Phex\Routing;
 
 use Phex\Contracts\Http\Handler;
 use Phex\Contracts\Routing\Matcher;
+use Phex\Contracts\Routing\EndpointResolver;
 use Phex\Http\Message\Headers;
 use Phex\Http\Message\Request;
 use Phex\Http\Message\Response;
@@ -14,7 +15,7 @@ use Phex\Routing\Parameter\InvalidParameter;
 
 final readonly class Router implements Handler
 {
-    public function __construct(private Matcher $matcher) {}
+    public function __construct(private Matcher $matcher, private ?EndpointResolver $resolver = null) {}
 
     public function handle(Request $request): Response
     {
@@ -35,6 +36,12 @@ final readonly class Router implements Handler
         $route = $result->route();
 
         try {
+            if ($this->resolver !== null) {
+                $endpoint = $this->resolver->resolve($route->endpoint);
+
+                return $endpoint->handle($request, $result->parameters);
+            }
+
             return $route->endpoint->handle($request, $result->parameters);
         } catch (InvalidParameter) {
             return new Response(status: 400, body: 'Bad Request');

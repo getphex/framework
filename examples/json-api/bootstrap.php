@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/../hello-world/bootstrap.php';
 require_once __DIR__.'/../../src/Contracts/Routing/Endpoint.php';
+require_once __DIR__.'/../../src/Contracts/Routing/EndpointResolver.php';
 require_once __DIR__.'/../../src/Contracts/Routing/Matcher.php';
 require_once __DIR__.'/../../src/Routing/Parameter/InvalidParameter.php';
 require_once __DIR__.'/../../src/Routing/Parameter/Parameters.php';
