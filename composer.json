@@ -1,0 +1,30 @@
+{
+    "name": "getphex/phex",
+    "description": "A PHP web framework designed for native ElephC compilation.",
+    "type": "library",
+    "require": {
+        "php": "^8.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Phex\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Phex\\Tests\\": "tests/",
+            "Phex\\Examples\\HelloWorld\\": "examples/hello-world/"
+        }
+    },
+    "scripts": {
+        "test": "python3 tools/checks/compatibility.py",
+        "test:php": "phpunit",
+        "test:elephc": "elephc test tests/Compatibility --strict-php"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
