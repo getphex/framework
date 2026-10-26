@@ -93,8 +93,8 @@ reused; their implementations must keep request data in local variables.
 
 `Request` and `Response` expose readonly properties and return new instances from
 their `with*` methods. Bodies are currently in-memory strings and preserve binary
-bytes. The first PHP SAPI adapter supports buffered HTTP responses; streaming and
-persistent/native server adapters are subsequent increments.
+bytes. PHP SAPI and ElephC's native web bridge support buffered HTTP responses;
+streaming and persistent PHP worker adapters are subsequent increments.
 
 `Headers` accepts a map of names to nonempty lists of string values. Names are
 case-insensitive and exported in lowercase. Repeated values preserve their order
@@ -314,9 +314,46 @@ separate transport support.
 
 For PHP-FPM, configure the web server to use `examples/compiled-container/public`
 as its document root and forward application routes to `index.php`. The same
-front controller and SAPI adapter are used. The shared normalization and emission
-behavior is tested on PHP and ElephC; actual SAPI/socket integration is tested
-with PHP's development server.
+front controller and SAPI adapter are used. The same socket checks exercise the
+PHP server and ElephC's native web server.
+
+## Run the native HTTP server
+
+From the repository root:
+
+```sh
+composer build:web
+./var/build/phex-web --listen 127.0.0.1:8080 --workers 1
+```
+
+Open [http://127.0.0.1:8080/users/7](http://127.0.0.1:8080/users/7) or use the
+same curl command as above. The native server serves `user-7`, including the same
+request ID headers and routing error responses. Stop it with Ctrl+C.
+
+`build:web` generates the container and compiles the example's `native.php`
+entry point with `elephc --web --strict-php`. The build wrapper and executable
+stay under ignored `var/build/`. PHP and Composer are used during the build;
+the resulting server runs as a native executable. The build helper accepts
+`--source` and `--output` for test entry points; output must stay inside `var/`.
+
+Both entry points load explicit declarations through `http-bootstrap.php`,
+without runtime Composer loading. `WebApplication::serve` has generic PHPDoc
+parameters bounded by `RequestReader` and `ResponseOutput`, and shares the
+container, kernel, middleware, router, endpoint and response policy. The PHP
+entry uses `GlobalsRequestReader`/`SapiOutput`; the native entry uses
+`NativeRequestReader`/`NativeOutput`. Both outputs share header/status emission.
+
+ElephC 0.27.6 returns `false` for an empty `php://input` body and does not provide
+`headers_sent()`. The native adapter normalizes empty input and relies on the
+default web bridge's buffered output. These differences stay at the runtime
+boundary. No native-only syntax is needed in shared PHP sources.
+
+The initial native target uses ElephC's default `worker` isolation. It executes
+the entry point with fresh PHP state for each request, so this example creates
+and closes its application container per invocation, as the PHP front controller
+does. Persistent PHP workers remain a separate host adapter. Other ElephC
+isolation modes and server options are described in the
+[ElephC web documentation](https://github.com/illegalstudio/elephc/blob/v0.27.6/docs/beyond-php/web.md).
 
 ## Static analysis
 
@@ -355,8 +392,10 @@ the same runtime PHPUnit cases under PHP and under `elephc test` with
 cases or any failed or skipped case, and removes temporary reports on exit.
 Both toolchains are required; a missing native compiler fails the command. It also
 compiles and runs all four examples and checks their output against PHP. A bounded
-HTTP check starts temporary PHP servers, exercises the compiled front controller
-and SAPI adapter over real sockets, and stops both processes on success or failure.
+HTTP check starts temporary PHP and native ElephC servers and runs the same socket
+cases against the compiled application and transport fixture. Native binaries,
+reports and wrappers are removed on success or failure, along with the test
+servers and their worker processes.
 
 For a single runtime:
 

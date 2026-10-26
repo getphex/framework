@@ -59,7 +59,11 @@
         "analyse:phpstan": "tools/phpstan/vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress",
         "test:build": "phpunit --testsuite Build",
         "test:compatibility": "python3 tools/checks/compatibility.py",
-        "test:http": "python3 tools/checks/http_smoke.py"
+        "test:http": "python3 tools/checks/http_smoke.py",
+        "build:web": [
+            "@generate",
+            "python3 tools/builds/elephc_web.py"
+        ]
     },
     "config": {
         "sort-packages": true

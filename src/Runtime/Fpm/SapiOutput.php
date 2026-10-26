@@ -6,6 +6,7 @@ namespace Phex\Runtime\Fpm;
 
 use Phex\Contracts\Runtime\ResponseOutput;
 use Phex\Http\Message\Headers;
+use Phex\Runtime\Http\SapiHeaders;
 use RuntimeException;
 
 final class SapiOutput implements ResponseOutput
@@ -15,13 +16,7 @@ final class SapiOutput implements ResponseOutput
         if (headers_sent()) {
             throw new RuntimeException('Cannot emit a response after output has started.');
         }
-        foreach ($headers->all() as $name => $values) {
-            foreach ($values as $value) {
-                header((string) $name.': '.$value, false);
-            }
-        }
-        // PHP treats Location specially. Restore the explicit response status after all headers.
-        http_response_code($status);
+        SapiHeaders::send($status, $headers);
     }
 
     public function write(string $body): void
