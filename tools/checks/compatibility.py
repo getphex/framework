@@ -84,6 +84,7 @@ def main() -> int:
         examples = (
             ("hello-world", b'{"hello":"world"}\n'),
             ("json-api", b'200 {"status":"ok"}\n200 {"id":42}\n404 Not Found\n405 Method Not Allowed\n'),
+            ("request-lifecycle", b'200 {"id":7} alice\n200 {"id":42} bob\n'),
         )
         for slug, expected in examples:
             example = ROOT / "examples" / slug / "main.php"

@@ -17,7 +17,8 @@
         "psr-4": {
             "Phex\\Tests\\": "tests/",
             "Phex\\Examples\\HelloWorld\\": "examples/hello-world/",
-            "Phex\\Examples\\JsonApi\\": "examples/json-api/"
+            "Phex\\Examples\\JsonApi\\": "examples/json-api/",
+            "Phex\\Examples\\RequestLifecycle\\": "examples/request-lifecycle/"
         }
     },
     "scripts": {
