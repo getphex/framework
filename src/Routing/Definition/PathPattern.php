@@ -12,8 +12,14 @@ final readonly class PathPattern
     /** @var list<Segment> */
     private array $segments;
 
-    public function __construct(public string $path)
+    /** @param list<Segment>|null $compiledSegments Prevalidated metadata for trusted build artifacts only. */
+    public function __construct(public string $path, ?array $compiledSegments = null)
     {
+        if ($compiledSegments !== null) {
+            $this->segments = $compiledSegments;
+
+            return;
+        }
         if (!str_starts_with($path, '/') || str_contains($path, '?') || str_contains($path, '#')) {
             throw new InvalidArgumentException('Route patterns must be absolute paths without query or fragment.');
         }
@@ -50,6 +56,12 @@ final readonly class PathPattern
         }
 
         $this->segments = $segments;
+    }
+
+    /** @return list<Segment> */
+    public function segments(): array
+    {
+        return $this->segments;
     }
 
     /** @param list<string> $parts */
