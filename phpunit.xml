@@ -12,5 +12,8 @@
         <testsuite name="Compatibility">
             <directory>tests/Compatibility/Cases</directory>
         </testsuite>
+        <testsuite name="Build">
+            <directory>tests/Build/Cases</directory>
+        </testsuite>
     </testsuites>
 </phpunit>

@@ -18,19 +18,45 @@
             "Phex\\Tests\\": "tests/",
             "Phex\\Examples\\HelloWorld\\": "examples/hello-world/",
             "Phex\\Examples\\JsonApi\\": "examples/json-api/",
-            "Phex\\Examples\\RequestLifecycle\\": "examples/request-lifecycle/"
+            "Phex\\Examples\\RequestLifecycle\\": "examples/request-lifecycle/",
+            "Phex\\Examples\\CompiledContainer\\Generated\\": "var/generated/example/",
+            "Phex\\Examples\\CompiledContainer\\": "examples/compiled-container/",
+            "Phex\\Tests\\Generated\\": "var/generated/tests/"
         }
     },
     "scripts": {
         "tools:install": "@composer --working-dir=tools/phpstan install --no-interaction --prefer-dist",
-        "analyse": "tools/phpstan/vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress",
-        "check": [
-            "@analyse",
-            "@test"
+        "analyse": [
+            "@generate",
+            "@analyse:phpstan"
         ],
-        "test": "python3 tools/checks/compatibility.py",
-        "test:php": "phpunit",
-        "test:elephc": "elephc test tests/Compatibility --strict-php"
+        "check": [
+            "@generate",
+            "@analyse:phpstan",
+            "@test:build",
+            "@test:compatibility"
+        ],
+        "test": [
+            "@generate",
+            "@test:build",
+            "@test:compatibility"
+        ],
+        "test:php": [
+            "@generate",
+            "phpunit"
+        ],
+        "test:elephc": [
+            "@generate",
+            "elephc test tests/Compatibility --strict-php"
+        ],
+        "generate": [
+            "@php bin/phex build examples/compiled-container/container.php",
+            "@php bin/phex build tests/Build/failing-application.php",
+            "@php bin/phex build tests/Build/failing-request.php"
+        ],
+        "analyse:phpstan": "tools/phpstan/vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress",
+        "test:build": "phpunit --testsuite Build",
+        "test:compatibility": "python3 tools/checks/compatibility.py"
     },
     "config": {
         "sort-packages": true

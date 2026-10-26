@@ -9,6 +9,8 @@ parameters:
         - src
         - tests
         - examples
+        - bin/phex
+        - var/generated
     tmpDir: var/cache/phpstan
     parallel:
         maximumNumberOfProcesses: 1

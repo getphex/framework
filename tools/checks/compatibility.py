@@ -49,7 +49,7 @@ def main() -> int:
         php_report = reports / "php.xml"
         native_report = reports / "elephc.xml"
         commands = (
-            ["php", str(phpunit), "--log-junit", str(php_report)],
+            ["php", str(phpunit), "--testsuite", "Compatibility", "--log-junit", str(php_report)],
             ["elephc", "test", "tests/Compatibility", "--strict-php", "--junit", str(native_report)],
         )
         exits = []
@@ -84,6 +84,7 @@ def main() -> int:
         examples = (
             ("hello-world", b'{"hello":"world"}\n'),
             ("json-api", b'200 {"status":"ok"}\n200 {"id":42}\n404 Not Found\n405 Method Not Allowed\n'),
+            ("compiled-container", b'200 user-7 alice\n200 user-42 bob\n'),
             ("request-lifecycle", b'200 {"id":7} alice\n200 {"id":42} bob\n'),
         )
         for slug, expected in examples:
