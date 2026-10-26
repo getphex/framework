@@ -1,6 +1,36 @@
-# Phex
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark_transparent.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo_transparent.png">
+    <img src="assets/logo_transparent.png" alt="Phex logo" width="420" height="168">
+  </picture>
+</p>
 
-A PHP web framework designed for native ElephC compilation.
+<h1 align="center">Phex</h1>
+
+<p align="center">
+  <em>Run on PHP. Compile with ElephC.</em>
+</p>
+
+<p align="center">
+  <a href="#requirements"><img src="https://img.shields.io/badge/PHP-8.3%2B-F06445?style=flat-square&amp;logo=php&amp;logoColor=white" alt="PHP 8.3 or newer"></a>
+  <a href="https://github.com/illegalstudio/elephc"><img src="https://img.shields.io/badge/ElephC-0.27.6-F06445?style=flat-square&amp;logoColor=white" alt="ElephC 0.27.6"></a>
+  <a href="#overview"><img src="https://img.shields.io/badge/status-in%20development-F06445?style=flat-square&amp;logoColor=white" alt="Status: in development"></a>
+</p>
+
+<p align="center">
+  <strong>PHP-compatible sources &middot; Native compilation &middot; Immutable HTTP &middot; Typed middleware</strong>
+</p>
+
+<p align="center">
+  A PHP web framework designed first for native compilation with ElephC.
+  Run the same shared sources directly on PHP, with immutable HTTP messages,
+  typed handlers and middleware, and an explicit middleware pipeline.
+</p>
+
+---
+
+## Overview
 
 Phex is in its first implementation increment. The HTTP core provides immutable
 requests, responses, and headers, typed handler and middleware contracts, and an
