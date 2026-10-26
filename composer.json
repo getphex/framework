@@ -34,11 +34,13 @@
             "@generate",
             "@analyse:phpstan",
             "@test:build",
+            "@test:http",
             "@test:compatibility"
         ],
         "test": [
             "@generate",
             "@test:build",
+            "@test:http",
             "@test:compatibility"
         ],
         "test:php": [
@@ -56,7 +58,8 @@
         ],
         "analyse:phpstan": "tools/phpstan/vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress",
         "test:build": "phpunit --testsuite Build",
-        "test:compatibility": "python3 tools/checks/compatibility.py"
+        "test:compatibility": "python3 tools/checks/compatibility.py",
+        "test:http": "python3 tools/checks/http_smoke.py"
     },
     "config": {
         "sort-packages": true

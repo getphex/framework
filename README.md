@@ -93,7 +93,8 @@ reused; their implementations must keep request data in local variables.
 
 `Request` and `Response` expose readonly properties and return new instances from
 their `with*` methods. Bodies are currently in-memory strings and preserve binary
-bytes. Streams and transport adapters are subsequent increments.
+bytes. The first PHP SAPI adapter supports buffered HTTP responses; streaming and
+persistent/native server adapters are subsequent increments.
 
 `Headers` accepts a map of names to nonempty lists of string values. Names are
 case-insensitive and exported in lowercase. Repeated values preserve their order
@@ -270,6 +271,53 @@ ignored `var/generated/`. Generation is deterministic, skips unchanged artifacts
 and replaces each complete file atomically after validation. Run the build before
 starting FPM/workers or invoking ElephC; the runtime never loads build configuration.
 
+## Try it in the browser
+
+From the repository root:
+
+```sh
+composer generate
+php -S 127.0.0.1:8080 -t examples/compiled-container/public examples/compiled-container/public/index.php
+```
+
+Open [http://127.0.0.1:8080/users/7](http://127.0.0.1:8080/users/7).
+The response is `user-7`. A request with an explicit ID demonstrates the shared
+middleware and endpoint session:
+
+```sh
+curl -i -H 'X-Request-Id: alice' http://127.0.0.1:8080/users/7
+```
+
+Both `X-Request-Id` and `X-Middleware-Id` contain `alice`. `/missing` returns
+`404`, `/users/nope` returns `400`, and `POST /users/7` returns `405` with
+`Allow: GET`. `HEAD` routes still require explicit definitions; the emitter
+suppresses content even for a `HEAD` error response. Stop the development server
+with Ctrl+C. PHP's built-in server and its router script are described in the
+[PHP manual](https://www.php.net/manual/en/features.commandline.webserver.php).
+
+The public front controller uses the generated container and existing kernel.
+`GlobalsRequestReader` reads `php://input`; `ServerRequest` maps the method, raw
+URI, `HTTP_*` fields and CGI content metadata into immutable messages. Values
+already combined by SAPI remain single header values. Application services close
+before response emission. Invalid transport metadata becomes `400`; unexpected
+application failures produce a generic `500` and are logged by the example.
+
+`BufferedResponseEmitter` writes through the typed `ResponseOutput` boundary;
+`SapiOutput` handles PHP status, header and output functions. Repeated response
+fields remain separate, including cookies. Buffered content lengths are computed
+from actual bytes, and transfer-encoding/trailer fields are removed. `HEAD` sends
+no body; informational, `204`, `205`, `304` and successful `CONNECT` responses also
+suppress content. Length is omitted where inappropriate and is zero for `205`,
+following [HTTP response semantics](https://www.rfc-editor.org/rfc/rfc9110.html#name-content-length).
+Streaming, informational response sequences, and connection upgrades/tunnels need
+separate transport support.
+
+For PHP-FPM, configure the web server to use `examples/compiled-container/public`
+as its document root and forward application routes to `index.php`. The same
+front controller and SAPI adapter are used. The shared normalization and emission
+behavior is tested on PHP and ElephC; actual SAPI/socket integration is tested
+with PHP's development server.
+
 ## Static analysis
 
 ```sh
@@ -292,7 +340,8 @@ Run the complete required checks with:
 composer check
 ```
 
-CI installs both dependency sets and runs this same command on PHP 8.3 and 8.5.
+CI installs both dependency sets and runs this same command on PHP 8.3 and 8.5,
+including local HTTP integration checks.
 
 ## Test both runtimes
 
@@ -305,7 +354,9 @@ the same runtime PHPUnit cases under PHP and under `elephc test` with
 `--strict-php`. It compares JUnit test identities and outcomes, fails on missing
 cases or any failed or skipped case, and removes temporary reports on exit.
 Both toolchains are required; a missing native compiler fails the command. It also
-compiles and runs all four examples and checks their output against PHP.
+compiles and runs all four examples and checks their output against PHP. A bounded
+HTTP check starts temporary PHP servers, exercises the compiled front controller
+and SAPI adapter over real sockets, and stops both processes on success or failure.
 
 For a single runtime:
 
@@ -320,3 +371,5 @@ encoding, parameter conversions, scope cleanup, combined failures, interleaved
 Fiber requests, generated service lifetimes, constructor-failure cleanup, scoped
 endpoint resolution, and all four examples. Compiler tests exercise graph failures,
 factory signatures, deterministic output, literal escaping, and atomic replacement.
+HTTP cases cover CGI metadata validation, raw URI and binary body preservation,
+header mapping, response framing, repeated fields, and content suppression.
