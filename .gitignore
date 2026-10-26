@@ -1,4 +1,5 @@
 /vendor/
+/tools/phpstan/vendor/
 /var/
 /.phpunit.cache/
 __pycache__/

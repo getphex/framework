@@ -7,6 +7,7 @@ namespace Phex\Tests\Compatibility\Cases;
 use Fiber;
 use Phex\Http\Message\Headers;
 use Phex\Http\Message\Request;
+use Phex\Http\Message\Response;
 use Phex\Http\Middleware\Pipeline;
 use Phex\Tests\Compatibility\Fixtures\EchoHandler;
 use Phex\Tests\Compatibility\Fixtures\FailOnceHandler;
@@ -111,6 +112,8 @@ final class PipelineTest extends TestCase
         $firstResponse = $first->getReturn();
         $secondResponse = $second->getReturn();
 
+        $this->assertTrue($firstResponse instanceof Response);
+        $this->assertTrue($secondResponse instanceof Response);
         $this->assertSame('first', $firstResponse->body);
         $this->assertSame('second', $secondResponse->body);
         $this->assertSame(['alice'], $firstResponse->headers->values('X-Request'));

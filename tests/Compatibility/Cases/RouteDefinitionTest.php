@@ -25,6 +25,7 @@ final class RouteDefinitionTest extends TestCase
         $this->assertSame('/users/{user_id42}', $route->pattern->path);
     }
 
+    /** @return list<array{string}> */
     public static function invalidPatterns(): array
     {
         return [

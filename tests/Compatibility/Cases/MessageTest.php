@@ -80,6 +80,7 @@ final class MessageTest extends TestCase
         $this->assertSame('*', $request->uri);
     }
 
+    /** @return list<array{string}> */
     public static function invalidMethods(): array
     {
         return [[''], ['GET POST'], ["GET\r\n"], ['GET:'], ["G\0ET"]];
@@ -92,6 +93,7 @@ final class MessageTest extends TestCase
         new Request($method, '/');
     }
 
+    /** @return list<array{string}> */
     public static function invalidUris(): array
     {
         return [
@@ -120,6 +122,7 @@ final class MessageTest extends TestCase
         $this->assertSame(599, (new Response(599))->status);
     }
 
+    /** @return list<array{int}> */
     public static function invalidStatuses(): array
     {
         return [[99], [600], [-1]];

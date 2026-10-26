@@ -1,0 +1,12 @@
+{
+    "name": "getphex/phpstan-tools",
+    "description": "Isolated static analysis tooling for Phex.",
+    "type": "project",
+    "require": {
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-phpunit": "^2.0"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

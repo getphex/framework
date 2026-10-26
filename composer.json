@@ -21,6 +21,12 @@
         }
     },
     "scripts": {
+        "tools:install": "@composer --working-dir=tools/phpstan install --no-interaction --prefer-dist",
+        "analyse": "tools/phpstan/vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress",
+        "check": [
+            "@analyse",
+            "@test"
+        ],
         "test": "python3 tools/checks/compatibility.py",
         "test:php": "phpunit",
         "test:elephc": "elephc test tests/Compatibility --strict-php"

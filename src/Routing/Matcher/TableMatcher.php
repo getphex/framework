@@ -20,11 +20,8 @@ final readonly class TableMatcher implements Matcher
     {
         $ordered = [];
 
-        foreach ($routes as $route) {
-            if (!$route instanceof Route) {
-                throw new InvalidArgumentException('The routing table must contain Route definitions.');
-            }
-
+        foreach ($routes as $item) {
+            $route = self::route($item);
             $next = [];
             $inserted = false;
 

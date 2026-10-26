@@ -43,7 +43,8 @@ jobs:
           tar -xzf "$phex_archive"
           echo "$phex_toolchain_dir" >> "$GITHUB_PATH"
       - run: composer install --no-interaction --prefer-dist
-      - run: composer test
+      - run: composer tools:install
+      - run: composer check
       - name: Remove toolchain artifacts
         if: always() && env.PHEX_ELEPHC_DIR != ''
         run: rm -rf -- "$PHEX_ELEPHC_DIR"

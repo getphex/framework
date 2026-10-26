@@ -35,6 +35,7 @@ final class ParametersTest extends TestCase
         $parameters->get('missing');
     }
 
+    /** @return list<array{string, int}> */
     public static function integers(): array
     {
         return [
@@ -53,6 +54,7 @@ final class ParametersTest extends TestCase
         $this->assertSame($raw, $parameters->get('id'));
     }
 
+    /** @return list<array{string}> */
     public static function invalidIntegers(): array
     {
         return [

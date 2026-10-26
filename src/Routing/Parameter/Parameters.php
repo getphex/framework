@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Phex\Routing\Parameter;
 
-use InvalidArgumentException;
 use OutOfBoundsException;
 
 final readonly class Parameters
@@ -18,10 +17,6 @@ final readonly class Parameters
         $copy = [];
 
         foreach ($values as $name => $value) {
-            if (!is_string($name) || !is_string($value)) {
-                throw new InvalidArgumentException('Route parameter names and values must be strings.');
-            }
-
             $copy[$name] = $value;
         }
 

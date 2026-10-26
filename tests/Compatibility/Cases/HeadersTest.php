@@ -99,6 +99,7 @@ final class HeadersTest extends TestCase
         $this->assertFalse($updated->without('123')->has('123'));
     }
 
+    /** @return list<array{string}> */
     public static function invalidNames(): array
     {
         return [

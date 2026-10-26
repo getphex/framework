@@ -9,6 +9,7 @@ use LogicException;
 use Phex\Examples\HelloWorld\JsonMiddleware;
 use Phex\Examples\JsonApi\JsonApi;
 use Phex\Http\Message\Request;
+use Phex\Http\Message\Response;
 use Phex\Http\Middleware\Pipeline;
 use Phex\Routing\Definition\Route;
 use Phex\Routing\Matcher\MatchStatus;
@@ -179,6 +180,7 @@ final class RouterTest extends TestCase
         $this->assertSame(405, $router->handle(new Request('HEAD', '/health'))->status);
     }
 
+    /** @return list<array{string}> */
     public static function invalidPaths(): array
     {
         return [
@@ -263,6 +265,8 @@ final class RouterTest extends TestCase
         $firstResponse = $first->getReturn();
         $secondResponse = $second->getReturn();
 
+        $this->assertTrue($firstResponse instanceof Response);
+        $this->assertTrue($secondResponse instanceof Response);
         $this->assertSame('7:alice', $firstResponse->body);
         $this->assertSame('42:bob', $secondResponse->body);
     }
