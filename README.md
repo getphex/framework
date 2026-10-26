@@ -15,6 +15,9 @@ the runtime pipeline exposes the shared handler contract.
 - ElephC 0.27.6 for native compilation and compatibility tests.
 - Python 3.10 or newer for the compatibility checker.
 
+On Linux, native builds also need an assembler, linker, libc development files,
+and the bzip2 development library (`libbz2-dev` on Debian and Ubuntu).
+
 ## Try the example
 
 ```sh
