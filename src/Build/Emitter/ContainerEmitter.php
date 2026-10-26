@@ -62,13 +62,7 @@ final class ContainerEmitter
             $source .= "        try {\n";
         }
         if ($graph->definition->routes !== []) {
-            $source .= "            \$this->routes = new \\Phex\\Routing\\Matcher\\TableMatcher([\n";
-            $routes = $graph->definition->routes;
-            usort($routes, static fn ($a, $b): int => [$a->path, $a->method, $a->endpoint] <=> [$b->path, $b->method, $b->endpoint]);
-            foreach ($routes as $route) {
-                $source .= '                new \\Phex\\Routing\\Definition\\Route('.Literal::emit($route->method).', '.Literal::emit($route->path).', new \\Phex\\Container\\Routing\\EndpointReference(\\'.Analyzer::className($route->endpoint)."::class)),\n";
-            }
-            $source .= "            ]);\n";
+            $source .= "            \$this->routes = new \\".$className."Matcher();\n";
         }
         foreach ($graph->nodes as $type => $node) {
             if ($node->lifetime === Lifetime::Application) {
@@ -122,6 +116,7 @@ final class ContainerEmitter
             $source .= "\n    /** @internal */\n    public function handler(): \\Phex\\Contracts\\Http\\Handler\n    {\n        \$this->assertOpen();\n        return ".$expression.";\n    }\n";
         }
         $source .= "}\n";
+        $source .= (new MatcherEmitter())->emit($graph->routes, $short.'Matcher');
         // Syntax-check only. The build process never evaluates emitted code.
         if (token_get_all($source, TOKEN_PARSE) === []) {
             throw new InvalidContainer('The generated artifact is empty.');

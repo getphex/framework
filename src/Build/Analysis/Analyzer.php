@@ -8,6 +8,7 @@ use Phex\Build\Emitter\Literal;
 use Phex\Build\Graph\Argument;
 use Phex\Build\Graph\Graph;
 use Phex\Build\Graph\Node;
+use Phex\Build\Graph\RouteNode;
 use Phex\Container\Definition\Container;
 use Phex\Container\Definition\Lifetime;
 use Phex\Container\Definition\Service;
@@ -100,13 +101,16 @@ final class Analyzer
         }
 
         $routes = [];
+        $routeNodes = [];
         foreach ($definition->routes as $route) {
             $type = self::className($route->endpoint);
             if (!is_a($type, Endpoint::class, true) || !isset($nodes[$type])) {
                 throw new InvalidContainer('Missing endpoint binding: '.$type);
             }
             try {
-                $routes[] = new Route($route->method, $route->path, new EndpointReference($route->endpoint));
+                $validated = new Route($route->method, $route->path, new EndpointReference($type));
+                $routes[] = $validated;
+                $routeNodes[] = new RouteNode($route->method, $route->path, $type, $validated->pattern->segments());
             } catch (InvalidArgumentException $error) {
                 throw new InvalidContainer('Invalid compiled route: '.$error->getMessage(), previous: $error);
             }
@@ -121,7 +125,7 @@ final class Analyzer
             throw new InvalidContainer('Missing handler binding: '.$definition->handler);
         }
 
-        return new Graph($nodes, $definition);
+        return new Graph($nodes, $definition, $routeNodes);
     }
 
     /** @param Service<object> $service */

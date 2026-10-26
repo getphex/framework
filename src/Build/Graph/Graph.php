@@ -9,6 +9,9 @@ use Phex\Container\Definition\Container;
 /** @internal */
 final readonly class Graph
 {
-    /** @param array<string, Node> $nodes */
-    public function __construct(public array $nodes, public Container $definition) {}
+    /**
+     * @param array<string, Node> $nodes
+     * @param list<RouteNode> $routes
+     */
+    public function __construct(public array $nodes, public Container $definition, public array $routes = []) {}
 }
