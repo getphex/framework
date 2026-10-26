@@ -37,7 +37,9 @@ requests, responses, and headers, typed handler and middleware contracts, and an
 explicit middleware pipeline. Shared sources run directly on PHP and compile with
 ElephC. Generic PHPDoc annotations specialize the pipeline assembly method while
 the runtime pipeline exposes the shared handler contract. Routing adds immutable
-definitions, a replaceable matcher, and explicit path parameter conversion.
+definitions, a replaceable matcher, and explicit path parameter conversion. The
+kernel creates an isolated scope for every request and releases its resources
+before returning the response.
 
 ## Requirements
 
@@ -53,6 +55,7 @@ and the bzip2 development library (`libbz2-dev` on Debian and Ubuntu).
 
 ```sh
 composer install
+composer tools:install
 php examples/hello-world/main.php
 ```
 
@@ -89,7 +92,7 @@ reused; their implementations must keep request data in local variables.
 
 `Request` and `Response` expose readonly properties and return new instances from
 their `with*` methods. Bodies are currently in-memory strings and preserve binary
-bytes. Streams, transport adapters, request scopes, and the build tool are
+bytes. Streams, transport adapters, and the build tool are
 subsequent increments.
 
 `Headers` accepts a map of names to nonempty lists of string values. Names are
@@ -158,6 +161,58 @@ $name = $parameters->map('name', fn (string $raw): string => strtoupper($raw));
 Run the routing example with `php examples/json-api/main.php`. It demonstrates a
 health endpoint, an integer user parameter, a missing path, and a rejected method.
 
+## Manage the request lifecycle
+
+`Kernel\Application` implements the HTTP `Handler` contract. For every call it
+creates a `RequestScope`, calls a typed `HandlerFactory`, executes the resulting
+handler, and closes the scope in `finally`. The application retains its shared
+factory; request state stays in the scope and in newly constructed handlers.
+
+Register resources implementing `ScopeResource` with `$scope->own($resource)`.
+The generic PHPDoc return type preserves the resource's concrete type. Resources
+close in reverse registration order. Registering the same object twice still
+closes it once. Closing is idempotent, including reentrant calls, and registration
+after closure begins raises `LogicException`.
+
+Every resource is attempted when cleanup throws. `CleanupFailed` exposes its
+typed first cause and the complete failure list. Its previous exception is the
+request failure when one exists, otherwise the first cleanup failure. Factory and
+handler exceptions propagate unchanged when cleanup succeeds.
+
+The `request-lifecycle` example shares its immutable router and creates a trace
+resource and middleware per request:
+
+```sh
+php examples/request-lifecycle/main.php
+```
+
+Factories must keep request state local. The current lifecycle closes before
+returning an eager string response; streaming will require a separate completion
+contract.
+
+## Static analysis
+
+```sh
+composer tools:install
+composer analyse
+```
+
+PHPStan runs at `level: max` against all framework sources, tests, and examples,
+with PHP 8.3 as the language target. There is no baseline or ignored-error list.
+PHPUnit extensions provide assertion-aware type checking for the shared tests.
+
+Analysis dependencies have their own Composer manifest and lockfile under
+`tools/phpstan/`. This keeps PHPStan's PHAR bootstrap outside the ElephC input
+graph. Its cache lives under the ignored `var/cache/phpstan/` directory.
+
+Run the complete required checks with:
+
+```sh
+composer check
+```
+
+CI installs both dependency sets and runs this same command on PHP 8.3 and 8.5.
+
 ## Test both runtimes
 
 ```sh
@@ -168,7 +223,7 @@ The command runs the same PHPUnit cases under PHP and under `elephc test` with
 `--strict-php`. It compares JUnit test identities and outcomes, fails on missing
 cases or any failed or skipped case, and removes temporary reports on exit.
 Both toolchains are required; a missing native compiler fails the command. It also
-compiles and runs both examples and checks their output against PHP.
+compiles and runs all three examples and checks their output against PHP.
 
 For a single runtime:
 
@@ -179,4 +234,5 @@ composer test:elephc
 
 The shared cases cover header validation and immutability, middleware order and
 short-circuiting, retries, reuse after an exception, routing precedence, path
-encoding, parameter conversions, interleaved Fiber requests, and both examples.
+encoding, parameter conversions, scope cleanup, combined failures, interleaved
+Fiber requests, and all three examples.
