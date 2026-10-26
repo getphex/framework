@@ -39,7 +39,8 @@ ElephC. Generic PHPDoc annotations specialize the pipeline assembly method while
 the runtime pipeline exposes the shared handler contract. Routing adds immutable
 definitions, a replaceable matcher, and explicit path parameter conversion. The
 kernel creates an isolated scope for every request and releases its resources
-before returning the response.
+before returning the response. The build tool validates explicit dependency graphs
+and emits typed PHP containers for both runtimes.
 
 ## Requirements
 
@@ -92,8 +93,7 @@ reused; their implementations must keep request data in local variables.
 
 `Request` and `Response` expose readonly properties and return new instances from
 their `with*` methods. Bodies are currently in-memory strings and preserve binary
-bytes. Streams, transport adapters, and the build tool are
-subsequent increments.
+bytes. Streams and transport adapters are subsequent increments.
 
 `Headers` accepts a map of names to nonempty lists of string values. Names are
 case-insensitive and exported in lowercase. Repeated values preserve their order
@@ -190,6 +190,86 @@ Factories must keep request state local. The current lifecycle closes before
 returning an eager string response; streaming will require a separate completion
 contract.
 
+## Compile a dependency container
+
+Service definitions use generic PHPDoc types and explicit constructor or public
+static factory providers. Bind each dependency by its class or interface. Named
+entries become public methods with concrete return types:
+
+```php
+use Phex\Build\Compiler\BuildConfig;
+use Phex\Container\Definition\Container;
+use Phex\Container\Definition\Lifetime;
+use Phex\Container\Definition\Service;
+use Phex\Examples\CompiledContainer\Connection;
+use Phex\Examples\CompiledContainer\MemoryUserRepository;
+use Phex\Examples\CompiledContainer\UserRepository;
+
+return new BuildConfig(new Container([
+    Service::constructor(Connection::class, Lifetime::Application),
+    Service::constructor(UserRepository::class, Lifetime::Application, MemoryUserRepository::class),
+], ['repository' => UserRepository::class]),
+    'App\Generated\ApplicationContainer',
+    __DIR__.'/var/generated/ApplicationContainer.php',
+);
+```
+
+Save this trusted build configuration as `container.php` and run
+`php bin/phex build container.php`. Load the generated file in the application
+bootstrap or register its namespace with Composer. Build artifacts are ordinary
+PHP with direct constructor/static factory calls and typed caches. Reflection
+runs exclusively in the build tool. Requests never evaluate source, generate
+classes, inspect constructors, or resolve arbitrary class names.
+
+The three lifetimes are:
+
+- `Application`: constructed at startup and shared until the container closes.
+- `Request`: constructed on first use and cached within one `RequestScope`.
+- `Transient`: constructed on every resolution and owned by the scope constructing it.
+
+All application services are initialized before the container constructor returns.
+`$container->request($scope)` reuses one generated context per container identity
+and scope. Request caches live in that context, retained by the request scope.
+Named request entries are accessed through this context; application entries are
+also available directly on the application container.
+
+The compiler rejects missing/duplicate bindings, dependency cycles, unsupported
+provider signatures, and application services that capture request state, including
+through transient dependencies. Object parameters require explicit bindings;
+nullable parameters still resolve their declared dependency. Scalar/array parameters
+need literal defaults or an explicit factory. Union, intersection, variadic, and
+by-reference dependencies require an explicit factory. Configuration objects and
+environment reads can be encapsulated in that factory.
+
+Resources implementing `ScopeResource` are registered automatically, including
+objects returned behind factory interfaces. Request resources close through the
+kernel's existing `finally` path. Application resources close when the host calls
+`$container->close()`, after all requests finish. Startup failures release resources
+already created. Cleanup follows the same LIFO and failure-chain policy as request
+scopes. Transient dependencies of application services belong to the application;
+transients resolved through a request context belong to that request.
+
+`EndpointRoute` binds a route to an endpoint service type. The emitted application
+container builds its shared route table once. `EndpointResolver` resolves the
+matched endpoint in the existing request context. An optional handler service can
+compose middleware around `Router`, using the built-in `Matcher` and
+`EndpointResolver` dependencies. `Request`, `RequestScope`, and `ApplicationScope`
+are also reserved built-in dependencies. A generated web container implements
+`HandlerFactory` and plugs directly into `Kernel\Application`.
+
+The complete example shares a repository, reuses a request session between
+middleware and endpoint, and creates transient endpoints:
+
+```sh
+composer generate
+php examples/compiled-container/main.php
+```
+
+It prints `200 user-7 alice` and `200 user-42 bob`. The generated files live under
+ignored `var/generated/`. Generation is deterministic, skips unchanged artifacts,
+and replaces each complete file atomically after validation. Run the build before
+starting FPM/workers or invoking ElephC; the runtime never loads build configuration.
+
 ## Static analysis
 
 ```sh
@@ -197,7 +277,8 @@ composer tools:install
 composer analyse
 ```
 
-PHPStan runs at `level: max` against all framework sources, tests, and examples,
+PHPStan runs at `level: max` against all framework sources, tests, examples, the CLI,
+and generated containers,
 with PHP 8.3 as the language target. There is no baseline or ignored-error list.
 PHPUnit extensions provide assertion-aware type checking for the shared tests.
 
@@ -219,11 +300,12 @@ CI installs both dependency sets and runs this same command on PHP 8.3 and 8.5.
 composer test
 ```
 
-The command runs the same PHPUnit cases under PHP and under `elephc test` with
+The command generates containers, runs build-host compiler tests on PHP, and runs
+the same runtime PHPUnit cases under PHP and under `elephc test` with
 `--strict-php`. It compares JUnit test identities and outcomes, fails on missing
 cases or any failed or skipped case, and removes temporary reports on exit.
 Both toolchains are required; a missing native compiler fails the command. It also
-compiles and runs all three examples and checks their output against PHP.
+compiles and runs all four examples and checks their output against PHP.
 
 For a single runtime:
 
@@ -235,4 +317,6 @@ composer test:elephc
 The shared cases cover header validation and immutability, middleware order and
 short-circuiting, retries, reuse after an exception, routing precedence, path
 encoding, parameter conversions, scope cleanup, combined failures, interleaved
-Fiber requests, and all three examples.
+Fiber requests, generated service lifetimes, constructor-failure cleanup, scoped
+endpoint resolution, and all four examples. Compiler tests exercise graph failures,
+factory signatures, deterministic output, literal escaping, and atomic replacement.
