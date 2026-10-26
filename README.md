@@ -126,8 +126,9 @@ handler of a middleware pipeline. Routing endpoints implement
 `Phex\Contracts\Routing\Endpoint`; they receive both `Request` and an immutable
 `Parameters` object. Route parameters stay separate from the HTTP message.
 
-`TableMatcher` parses and orders patterns at construction. A future generated
-matcher can implement the same `Matcher` contract. Definitions use full-segment
+`TableMatcher` parses and orders patterns at construction. Container builds emit a
+specific matcher implementing the same `Matcher` contract, with prevalidated
+segments and fixed search branches. Definitions use full-segment
 placeholders such as `{id}`; names are ASCII identifiers and must be unique within
 a pattern. Repeated structural patterns for the same method are rejected, even
 when their placeholder names differ.
@@ -251,12 +252,28 @@ scopes. Transient dependencies of application services belong to the application
 transients resolved through a request context belong to that request.
 
 `EndpointRoute` binds a route to an endpoint service type. The emitted application
-container builds its shared route table once. `EndpointResolver` resolves the
+container constructs its generated matcher once. `EndpointResolver` resolves the
 matched endpoint in the existing request context. An optional handler service can
 compose middleware around `Router`, using the built-in `Matcher` and
 `EndpointResolver` dependencies. `Request`, `RequestScope`, and `ApplicationScope`
 are also reserved built-in dependencies. A generated web container implements
 `HandlerFactory` and plugs directly into `Kernel\Application`.
+
+The generated `<Container>Matcher` is ordinary typed PHP in the same artifact as
+the containers. Build-time analysis validates patterns and ambiguous method/shape
+pairs, extracts segment metadata, and emits segment-count dispatch with literal
+branches before parameter branches. Method-specific names are captured directly
+into `Parameters`. A literal route with an incompatible method still permits a
+compatible parameter route. Unique `Allow` methods are ordered during generation;
+matching uses local boolean flags without sorting methods or rebuilding a tree.
+
+Generated `Route` objects receive prevalidated segment arrays. Their `PathPattern`
+objects preserve matching and shape/precedence operations while skipping pattern
+parsing at startup. The optional `compiledSegments` inputs are internal hooks for
+trusted build artifacts; ordinary constructors retain their existing validation.
+Incoming request paths still use the shared percent-decoding and validation rules.
+`TableMatcher` remains available for explicitly assembled routers and serves as
+the reference for differential compatibility tests.
 
 The complete example shares a repository, reuses a request session between
 middleware and endpoint, and creates transient endpoints:
@@ -412,3 +429,7 @@ endpoint resolution, and all four examples. Compiler tests exercise graph failur
 factory signatures, deterministic output, literal escaping, and atomic replacement.
 HTTP cases cover CGI metadata validation, raw URI and binary body preservation,
 header mapping, response framing, repeated fields, and content suppression.
+The compiled matcher is compared with `TableMatcher` across methods, overlapping
+patterns, method-specific captures, numeric literals/methods, encoded bytes, empty
+segments, query strings, malformed input, and interleaved calls. The compiled
+container example uses the generated matcher in the real PHP/native HTTP checks.
