@@ -107,6 +107,78 @@ Request methods preserve their case. Request URIs preserve their encoded form an
 reject empty values, whitespace, controls, and fragments. This is basic validation,
 not a full URI parser. Response status codes must be between 100 and 599.
 
+## Decode and return typed JSON
+
+`Decoder<T>` describes a stateless decoder returning a concrete DTO. DTO mapping
+and validation are explicit PHP and compile without reflection. The compiled
+container example includes `CreateUserDecoder`, implementing
+`Decoder<CreateUserInput>`, and a `CreatedUser` result with a typed `toArray()`.
+
+An endpoint uses the generic request-body helper and explicitly mapped output:
+
+```php
+$input = JsonBody::decode(
+    $request,
+    fn (string $body): CreateUserInput => $this->decoder->decode($body),
+);
+$user = $this->users->create($input);
+
+return JsonResponse::create($user->toArray(), 201, new Headers([
+    'Location' => ['/users/'.$user->id],
+]));
+```
+
+The typed closure literal lets ElephC 0.27.6 infer the generic DTO return type.
+`JsonBody` requires one `Content-Type` field containing `application/json` or an
+application subtype with a `+json` suffix. Media names are case-insensitive and
+parameters are ignored. Input bytes are decoded as UTF-8 without transcoding.
+
+`JsonObject::decode` validates syntax with `JSON_THROW_ON_ERROR` at depth 64,
+requires an object root, and exposes fields for explicit mapping. An empty object
+is accepted; a root list or scalar is a validation failure. Nested values use
+associative decoding. Numbers keep their PHP numeric types, so a large unquoted
+number cannot pass a string-field check. Duplicate object keys use the last value.
+
+`JsonInputMiddleware` maps only explicit `InputError` exceptions:
+
+| Status | Error | Meaning |
+| --- | --- | --- |
+| `400` | `malformed_json` | Invalid JSON, UTF-8, or excessive nesting |
+| `415` | `unsupported_media_type` | Missing, repeated, or unsupported content type |
+| `422` | `invalid_input` | Valid JSON with an invalid shape or field values |
+
+Validation responses include an `errors` map. Malformed-input responses expose
+the stable error code; the original parser exception remains available as the
+exception cause. Other application failures propagate through the existing
+kernel cleanup path.
+
+`JsonResponse::create` returns an immutable `Response` with `application/json`,
+preserving the supplied status and other headers. Output is an explicitly mapped
+array; lists remain lists and an empty array encodes as `[]`. Encoding uses
+`JSON_THROW_ON_ERROR` at depth 64, so invalid UTF-8, non-finite numbers and excessive
+nesting fail before a response is emitted. Encoding failures propagate as server
+errors.
+
+With the browser example running, create a user:
+
+```sh
+curl -i http://127.0.0.1:8080/users \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-Id: creator' \
+  --data '{"name":"Ada"}'
+```
+
+The response is `201 Created`, includes `Location: /users/1`, and has the body
+`{"id":1,"name":"Ada"}`. The decoder requires a string name, removes surrounding
+ASCII spaces, accepts 1 to 100 UTF-8 bytes without ASCII controls, and rejects
+unknown fields. The middleware and endpoint share the current request session.
+Existing text responses retain their content type.
+
+The example repository stores created names within its application container.
+Multiple calls through one `Kernel\Application` share those names and incrementing
+IDs. The current PHP and native HTTP entries create a new container per request;
+durable storage across HTTP requests requires a persistent repository.
+
 ## Route requests
 
 ```php
@@ -475,6 +547,10 @@ endpoint resolution, and all four examples. Compiler tests exercise graph failur
 factory signatures, deterministic output, literal escaping, and atomic replacement.
 HTTP cases cover CGI metadata validation, raw URI and binary body preservation,
 header mapping, response framing, repeated fields, and content suppression.
+JSON cases cover typed DTO decoding, field validation, media types, root shape,
+UTF-8 and escapes, bounded nesting, encoding failures, scoped creation, and
+recovery after rejected input. The same POST/error socket checks run on
+development PHP, compiled PHP, native ElephC, and the isolated native distribution.
 The compiled matcher is compared with `TableMatcher` across methods, overlapping
 patterns, method-specific captures, numeric literals/methods, encoded bytes, empty
 segments, query strings, malformed input, and interleaved calls. The compiled
