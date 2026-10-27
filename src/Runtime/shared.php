@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 // Declaration-only runtime graph shared by compiled PHP and ElephC.
+require_once __DIR__.'/../Contracts/Config/EnvironmentReader.php';
 require_once __DIR__.'/../Contracts/Http/Handler.php';
 require_once __DIR__.'/../Contracts/Http/Middleware.php';
 require_once __DIR__.'/../Contracts/Http/Decoder.php';
@@ -23,6 +24,10 @@ require_once __DIR__.'/../Http/Message/Request.php';
 require_once __DIR__.'/../Http/Message/Response.php';
 require_once __DIR__.'/../Http/Middleware/Pipeline.php';
 require_once __DIR__.'/../Support/IntegerParser.php';
+require_once __DIR__.'/../Config/InvalidConfiguration.php';
+require_once __DIR__.'/../Config/ArrayEnvironment.php';
+require_once __DIR__.'/../Config/Environment.php';
+require_once __DIR__.'/Environment/ProcessEnvironment.php';
 require_once __DIR__.'/../Http/Input/InputError.php';
 require_once __DIR__.'/../Http/Json/InputError.php';
 require_once __DIR__.'/../Http/Json/JsonObject.php';

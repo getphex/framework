@@ -13,20 +13,20 @@ sys.dont_write_bytecode = True
 from http_smoke import ROOT, check, fields, php_command, request, server
 
 
-def run(command, project):
-    result = subprocess.run(command, cwd=project, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+def run(command, project, *, env=None):
+    result = subprocess.run(command, cwd=project, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
     if result.returncode:
         raise RuntimeError(f"Command failed: {command}\n{result.stdout}")
     return result.stdout
 
 
-def verify(port, home="/", greeting="world", search="/search"):
+def verify(port, home="/", greeting="world", search="/search", page_size=20):
     status, headers, body = request(port, "GET", home)
     check(status == 200 and body.startswith(b'{'), f"Standalone home returned {status}: {body!r}")
     check((status, json.loads(body)) == (200, {"hello": greeting}), "The standalone home route failed.")
     check(fields(headers, "Content-Type") == ["application/json"], "Standalone JSON metadata changed.")
     check(fields(headers, "Link") == [f'<{search}>; rel="search"'], "Named route generation returned a stale search link.")
-    verify_query(port, search)
+    verify_query(port, search, page_size)
     status, headers, body = request(port, "POST", "/greet", b'{"name":"Ada"}', {"Content-Type": "application/json"})
     check((status, body) == (200, b'{"hello":"Ada"}'), "The standalone typed POST failed.")
     for payload, content_type, expected in ((b'{', "application/json", 400), (b'{}', "application/json", 422), (b'{}', "text/plain", 415)):
@@ -41,8 +41,8 @@ def verify(port, home="/", greeting="world", search="/search"):
     check(fields(headers, "Content-Type") == ["text/plain; charset=utf-8"], "Server errors lost the default content type.")
 
 
-def verify_query(port, search):
-    defaults = {"page": 1, "limit": 20, "active": False, "sort": "asc"}
+def verify_query(port, search, page_size):
+    defaults = {"page": 1, "limit": page_size, "active": False, "sort": "asc"}
     for path, expected in (
         ("/search", defaults),
         ("/search?%70age=0002&limit=10&active=true&sort=desc", {"page": 2, "limit": 10, "active": True, "sort": "desc"}),
@@ -82,7 +82,38 @@ def verify_query(port, search):
     check((status, json.loads(body)) == (200, defaults), "Query state leaked after rejected input.")
 
 
+def configuration_environment(**overrides):
+    environment = dict(os.environ)
+    for name in ("PHEX_GREETING", "PHEX_PAGE_SIZE", "PHEX_UPPERCASE_GREETING"):
+        environment.pop(name, None)
+    environment.update(overrides)
+    return environment
+
+
+def verify_environment(command):
+    for values, greeting, page_size in (
+        ({"PHEX_GREETING": "runtime-native", "PHEX_PAGE_SIZE": "9", "PHEX_UPPERCASE_GREETING": "true"}, "RUNTIME-NATIVE", 9),
+        ({"PHEX_GREETING": "0", "PHEX_PAGE_SIZE": "1", "PHEX_UPPERCASE_GREETING": "0"}, "0", 1),
+    ):
+        with server(command, env=configuration_environment(**values), error_log_marker="private failure") as port:
+            verify(port, "/hello", greeting, "/find", page_size)
+    for name, value in (
+        ("PHEX_PAGE_SIZE", "do-not-print-config-value"),
+        ("PHEX_PAGE_SIZE", "101"),
+        ("PHEX_UPPERCASE_GREETING", "yes"),
+        ("PHEX_GREETING", ""),
+    ):
+        with server(command, env=configuration_environment(**{name: value}), error_log_marker=name,
+                    forbidden_log_marker="do-not-print-config-value") as port:
+            status, headers, body = request(port, "GET", "/hello")
+            check((status, body) == (500, b"Internal Server Error"), "Invalid startup configuration escaped the host error policy.")
+            check(fields(headers, "Content-Type") == ["text/plain; charset=utf-8"], "Configuration errors lost their content type.")
+
+
 def main():
+    baseline_environment = configuration_environment()
+    build_canary = "phex-build-environment-canary-6f891b40"
+    build_environment = configuration_environment(PHEX_GREETING=build_canary, PHEX_PAGE_SIZE="invalid-during-build", PHEX_UPPERCASE_GREETING="invalid-during-build")
     with tempfile.TemporaryDirectory(prefix="phex-application-") as temporary:
         directory = Path(temporary)
         package = directory / "package"
@@ -116,7 +147,7 @@ def main():
         routes = project / "routes/web.php"
         routes.write_text(routes.read_text().replace("return [", "return [\n    new EndpointRoute('GET', '/fail', \\App\\Http\\Action\\FailAction::class),"))
 
-        with server(php_command(project / "public/index.php"), error_log_marker="private failure") as port:
+        with server(php_command(project / "public/index.php"), error_log_marker="private failure", env=baseline_environment) as port:
             verify(port)
             routes = project / "routes/web.php"
             routes.write_text(routes.read_text().replace("'/'", "'/hello'").replace("'/search'", "'/find'"))
@@ -126,18 +157,20 @@ def main():
             (support / "YGreetingTrait.php").write_text("<?php namespace App\\Support; trait YGreetingTrait { public function greeting(): string { return 'universe'; } }\n")
             (support / "ZBase.php").write_text("<?php namespace App\\Support; class ZBase {}\n")
             (support / "AGreeting.php").write_text("<?php namespace App\\Support; final class AGreeting extends ZBase implements ZGreeting { use YGreetingTrait; }\n")
-            action = project / "app/Http/Action/HomeAction.php"
-            action.write_text(action.read_text().replace("'world'", "(new \\App\\Support\\AGreeting())->greeting()"))
+            settings_factory = project / "app/Config/SettingsFactory.php"
+            settings_factory.write_text(settings_factory.read_text().replace("'world'", "(new \\App\\Support\\AGreeting())->greeting()"))
             verify(port, "/hello", "universe", "/find")
             check(request(port, "GET", "/")[0] == 404, "Development retained an old route.")
         check(not (project / "var/generated").exists(), "Development wrote build artifacts.")
         print("Standalone PHP verified without artifacts or the source package, including live route/class edits.", flush=True)
+        verify_environment(php_command(project / "public/index.php"))
 
-        run(["composer", "build"], project)
+        run(["composer", "build"], project, env=build_environment)
         generated = project / "var/generated"
         snapshots = {path.name: path.read_bytes() for path in generated.iterdir()}
-        run(["composer", "build"], project)
+        run(["composer", "build"], project, env=baseline_environment)
         check(snapshots == {path.name: path.read_bytes() for path in generated.iterdir()}, "Application generation is not deterministic.")
+        check(all(build_canary.encode() not in contents for contents in snapshots.values()), "Build environment values entered generated PHP artifacts.")
         native_bootstrap = (generated / "native-bootstrap.php").read_text()
         check(str(ROOT) not in native_bootstrap and str(project) not in native_bootstrap, "Generated includes contain absolute checkout paths.")
         check(native_bootstrap.index("/Support/ZGreeting.php") < native_bootstrap.index("/Support/AGreeting.php"), "Interface declaration order is incorrect.")
@@ -179,15 +212,23 @@ def main():
         failed = subprocess.run(["php", "vendor/bin/phex", "compile", "config/build.php"], cwd=project, env=environment, capture_output=True)
         check(failed.returncode != 0 and not (build / "server").exists() and not (build / "server.s").exists(), "Failed compilation retained a stale executable or assembly.")
         shutil.rmtree(fake)
-        run(["composer", "build:native"], project)
+        run(["composer", "build:native"], project, env=build_environment)
+        binary_snapshot = (project / "var/build/server").read_bytes()
+        check(build_canary.encode() not in binary_snapshot, "Build environment values entered the native executable.")
         moved = directory / "relocated application"
         project.rename(moved)
         project = moved
-        with server(php_command(project / "public/compiled.php"), error_log_marker="private failure") as port:
+        with server(php_command(project / "public/compiled.php"), error_log_marker="private failure", env=baseline_environment) as port:
             verify(port, "/hello", "universe", "/find")
-        with server([str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"], error_log_marker="private failure") as port:
+        native_command = [str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"]
+        with server(native_command, error_log_marker="private failure", env=baseline_environment) as port:
             verify(port, "/hello", "universe", "/find")
         print("Installed build/native CLI, PHPStan max, declaration order and project relocation verified.", flush=True)
+        verify_environment(php_command(project / "public/compiled.php"))
+        verify_environment(native_command)
+        check((project / "var/build/server").read_bytes() == binary_snapshot, "Changing runtime configuration replaced the native executable.")
+        del binary_snapshot
+        print("One native executable verified with different runtime environments and invalid bootstrap configuration, without embedding build values.", flush=True)
 
         installed = project / "vendor/getphex/phex"
         for relative in ("src/Build", "src/Runtime/Development", "src/Console", "stubs"):
@@ -197,12 +238,14 @@ def main():
         (project / "vendor/autoload.php").unlink()
         (project / "public/index.php").unlink()
         (project / "var/build/server").unlink()
-        run(["elephc", "--web", "--strict-php", str(project / "var/build/server.php")], project)
-        with server(php_command(project / "public/compiled.php"), error_log_marker="private failure") as port:
+        run(["elephc", "--web", "--strict-php", str(project / "var/build/server.php")], project, env=build_environment)
+        with server(php_command(project / "public/compiled.php"), error_log_marker="private failure", env=baseline_environment) as port:
             verify(port, "/hello", "universe", "/find")
-        with server([str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"], error_log_marker="private failure") as port:
+        with server([str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"], error_log_marker="private failure", env=baseline_environment) as port:
             verify(port, "/hello", "universe", "/find")
         print("Standalone compiled PHP/native verified without Composer loading, development/build code or configuration.", flush=True)
+        verify_environment(php_command(project / "public/compiled.php"))
+        verify_environment([str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"])
     return 0
 
 

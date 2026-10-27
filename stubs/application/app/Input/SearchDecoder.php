@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Input;
 
+use App\Config\ApplicationSettings;
 use Phex\Contracts\Http\Decoder;
 use Phex\Http\Input\InputError;
 use Phex\Http\Query\QueryParameters;
@@ -11,6 +12,8 @@ use Phex\Http\Query\QueryParameters;
 /** @implements Decoder<SearchInput> */
 final class SearchDecoder implements Decoder
 {
+    public function __construct(private readonly ApplicationSettings $settings) {}
+
     public function decode(string $input): SearchInput
     {
         $query = QueryParameters::decode($input);
@@ -20,7 +23,7 @@ final class SearchDecoder implements Decoder
             }
         }
         $page = $query->integer('page', 1);
-        $limit = $query->integer('limit', 20);
+        $limit = $query->integer('limit', $this->settings->pageSize);
         $active = $query->boolean('active', false);
         $sort = $query->get('sort', 'asc');
         if ($page < 1) {

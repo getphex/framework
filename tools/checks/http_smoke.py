@@ -19,14 +19,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 @contextmanager
-def server(command, *, error_log_marker=None):
+def server(command, *, error_log_marker=None, forbidden_log_marker=None, env=None):
     with socket.socket() as reservation:
         reservation.bind(("127.0.0.1", 0))
         port = reservation.getsockname()[1]
     with tempfile.TemporaryFile(dir=ROOT / "var") as log:
         process = subprocess.Popen(
             [part.replace("{port}", str(port)) for part in command],
-            cwd=ROOT, stdout=log, stderr=log, start_new_session=True,
+            cwd=ROOT, stdout=log, stderr=log, start_new_session=True, env=env,
         )
         try:
             deadline = time.monotonic() + 10
@@ -41,10 +41,13 @@ def server(command, *, error_log_marker=None):
                         raise RuntimeError("Timed out starting the HTTP test server.")
                     time.sleep(0.05)
             yield port
-            if error_log_marker is not None:
+            if error_log_marker is not None or forbidden_log_marker is not None:
                 log.seek(0)
-                if error_log_marker.encode() not in log.read():
+                contents = log.read()
+                if error_log_marker is not None and error_log_marker.encode() not in contents:
                     raise RuntimeError('The application error was not reported to the server log.')
+                if forbidden_log_marker is not None and forbidden_log_marker.encode() in contents:
+                    raise RuntimeError('The server log exposed the configuration value.')
         except Exception:
             log.seek(0)
             print(log.read().decode(errors="replace"))

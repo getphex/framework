@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Phex\Tests\Compatibility\Cases;
 
+use App\Config\ApplicationSettings;
 use App\Input\SearchDecoder;
 use App\Input\SearchInput;
 use InvalidArgumentException;
@@ -274,7 +275,7 @@ final class QueryTest extends TestCase
 
     public function testDtoDecodersRetainTheirConcreteGenericResult(): void
     {
-        $decoder = new SearchDecoder();
+        $decoder = new SearchDecoder(new ApplicationSettings('world', 20, false));
         $input = QueryString::decode(new Request('GET', '/search?page=2&limit=10&active=true&sort=desc'),
             fn (string $query): SearchInput => $decoder->decode($query));
         $this->assertSame(2, $input->page);

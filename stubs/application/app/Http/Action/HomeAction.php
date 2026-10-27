@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Action;
 
+use App\Config\ApplicationSettings;
 use Phex\Contracts\Routing\Endpoint;
 use Phex\Contracts\Routing\UrlGenerator;
 use Phex\Http\Json\JsonResponse;
@@ -14,11 +15,16 @@ use Phex\Routing\Parameter\Parameters;
 
 final readonly class HomeAction implements Endpoint
 {
-    public function __construct(private UrlGenerator $urls) {}
+    public function __construct(private UrlGenerator $urls, private ApplicationSettings $settings) {}
 
     public function handle(Request $request, Parameters $parameters): Response
     {
-        return JsonResponse::create(['hello' => 'world'], headers: new Headers([
+        $greeting = $this->settings->greeting;
+        if ($this->settings->uppercaseGreeting) {
+            $greeting = strtoupper($greeting);
+        }
+
+        return JsonResponse::create(['hello' => $greeting], headers: new Headers([
             'Link' => ['<'.$this->urls->generate('search').'>; rel="search"'],
         ]));
     }
