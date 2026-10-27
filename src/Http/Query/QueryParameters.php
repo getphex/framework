@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Phex\Http\Query;
 
 use InvalidArgumentException;
+use LogicException;
 use Phex\Http\Input\InputError;
 use Phex\Http\Message\Request;
 use Phex\Support\IntegerParser;
@@ -47,7 +48,8 @@ final readonly class QueryParameters
 
     public function has(string $name): bool
     {
-        foreach ($this->parameters as $parameter) {
+        foreach ($this->parameters as $item) {
+            $parameter = self::parameter($item);
             if ($parameter->name === $name) {
                 return true;
             }
@@ -60,7 +62,8 @@ final readonly class QueryParameters
     public function values(string $name): array
     {
         $values = [];
-        foreach ($this->parameters as $parameter) {
+        foreach ($this->parameters as $item) {
+            $parameter = self::parameter($item);
             if ($parameter->name === $name) {
                 $values[] = $parameter->value;
             }
@@ -72,7 +75,13 @@ final readonly class QueryParameters
     /** @return list<QueryParameter> */
     public function all(): array
     {
-        return $this->parameters;
+        $copy = [];
+        foreach ($this->parameters as $item) {
+            $parameter = self::parameter($item);
+            $copy[] = new QueryParameter($parameter->name, $parameter->value);
+        }
+
+        return $copy;
     }
 
     public function get(string $name, ?string $default = null): string
@@ -129,13 +138,23 @@ final readonly class QueryParameters
     private function single(string $name): ?string
     {
         $value = null;
-        foreach ($this->parameters as $parameter) {
+        foreach ($this->parameters as $item) {
+            $parameter = self::parameter($item);
             if ($parameter->name === $name) {
                 if ($value !== null) {
                     throw InputError::validation(['query.'.$name => 'Expected a single query parameter.']);
                 }
                 $value = $parameter->value;
             }
+        }
+
+        return $value;
+    }
+
+    private static function parameter(mixed $value): QueryParameter
+    {
+        if (!$value instanceof QueryParameter) {
+            throw new LogicException('Invalid entry in the immutable query parameters.');
         }
 
         return $value;
