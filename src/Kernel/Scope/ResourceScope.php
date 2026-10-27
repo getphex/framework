@@ -23,19 +23,25 @@ final class ResourceScope
      */
     public function own(ScopeResource $resource): ScopeResource
     {
+        $this->register($resource);
+
+        return $resource;
+    }
+
+    /** @internal Register ownership when no generic return value is needed. */
+    public function register(ScopeResource $resource): void
+    {
         if ($this->closed) {
             throw new LogicException('Cannot register resources in a closed resource scope.');
         }
 
         foreach ($this->resources as $existing) {
             if ($resource === $existing) {
-                return $resource;
+                return;
             }
         }
 
         $this->resources[] = $resource;
-
-        return $resource;
     }
 
     public function isClosed(): bool

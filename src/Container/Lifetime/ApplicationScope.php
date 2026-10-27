@@ -24,7 +24,9 @@ final class ApplicationScope
      */
     public function own(ScopeResource $resource): ScopeResource
     {
-        return $this->resources->own($resource);
+        $this->resources->register($resource);
+
+        return $resource;
     }
 
     public function isClosed(): bool

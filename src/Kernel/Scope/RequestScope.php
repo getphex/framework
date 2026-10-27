@@ -28,7 +28,9 @@ final class RequestScope
      */
     public function own(ScopeResource $resource): ScopeResource
     {
-        return $this->resources->own($resource);
+        $this->resources->register($resource);
+
+        return $resource;
     }
 
     public function isClosed(): bool
@@ -56,7 +58,7 @@ final class RequestScope
         if ($this->context($owner) !== null) {
             throw new LogicException('A context is already bound to this request scope.');
         }
-        $this->resources->own($context);
+        $this->resources->register($context);
         $this->contexts[] = new ScopeContext($owner, $context);
     }
 
