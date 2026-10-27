@@ -40,7 +40,8 @@ the runtime pipeline exposes the shared handler contract. Routing adds immutable
 definitions, a replaceable matcher, and explicit path parameter conversion. The
 kernel creates an isolated scope for every request and releases its resources
 before returning the response. The build tool validates explicit dependency graphs
-and emits typed PHP containers for both runtimes.
+and emits typed PHP containers for both runtimes. PHP development can interpret
+the same definitions without generating artifacts.
 
 ## Requirements
 
@@ -220,8 +221,9 @@ Save this trusted build configuration as `container.php` and run
 `php bin/phex build container.php`. Load the generated file in the application
 bootstrap or register its namespace with Composer. Build artifacts are ordinary
 PHP with direct constructor/static factory calls and typed caches. Reflection
-runs exclusively in the build tool. Requests never evaluate source, generate
-classes, inspect constructors, or resolve arbitrary class names.
+runs in the build tool or the separate PHP development bootstrap. Generated
+containers never evaluate source, generate classes, inspect constructors, or
+resolve arbitrary class names.
 
 The three lifetimes are:
 
@@ -286,14 +288,15 @@ php examples/compiled-container/main.php
 It prints `200 user-7 alice` and `200 user-42 bob`. The generated files live under
 ignored `var/generated/`. Generation is deterministic, skips unchanged artifacts,
 and replaces each complete file atomically after validation. Run the build before
-starting FPM/workers or invoking ElephC; the runtime never loads build configuration.
+starting compiled PHP hosts or invoking ElephC; the compiled runtime never loads
+build configuration.
 
 ## Try it in the browser
 
 From the repository root:
 
 ```sh
-composer generate
+composer install
 php -S 127.0.0.1:8080 -t examples/compiled-container/public examples/compiled-container/public/index.php
 ```
 
@@ -312,7 +315,37 @@ suppresses content even for a `HEAD` error response. Stop the development server
 with Ctrl+C. PHP's built-in server and its router script are described in the
 [PHP manual](https://www.php.net/manual/en/features.commandline.webserver.php).
 
-The public front controller uses the generated container and existing kernel.
+The development front controller uses Composer and `DevelopmentContainer` with
+the existing kernel. It reads the same `container.php` definitions, validates them
+with the build's `Analyzer`, and uses `TableMatcher`. Constructor and factory
+metadata are inspected at bootstrap; service resolution uses the validated data
+and constructs existing classes. It performs no `eval`, class generation, or
+artifact writes. A fresh checkout needs no `composer generate` to serve PHP.
+
+Changes to routes, bindings, provider signatures, and application code are loaded
+on subsequent PHP requests. If OPcache is enabled, development settings must
+validate timestamps; `opcache.revalidate_freq=0` makes edits visible on the next
+request. Persistent PHP workers will need a restart or a future watcher to reload
+class declarations.
+
+Both backends require the same explicit bindings and reject invalid dependency
+graphs and lifetimes. Development retains eager application services, isolated
+request caches, transient ownership, and deterministic cleanup. It implements the
+same `HandlerFactory` contract as a generated web container. For development-only
+composition or diagnostics, `get(Foo::class)` has a generic return type; request
+and transient services must be obtained through `$container->request($scope)`.
+Application handlers depend on shared contracts and services.
+
+The compiled PHP front controller remains available explicitly:
+
+```sh
+composer generate
+php -S 127.0.0.1:8080 -t examples/compiled-container/public examples/compiled-container/public/compiled.php
+```
+
+`compiled.php` loads the generated container through the static bootstrap. It
+shares the generated runtime with ElephC and loads no development backend.
+
 `GlobalsRequestReader` reads `php://input`; `ServerRequest` maps the method, raw
 URI, `HTTP_*` fields and CGI content metadata into immutable messages. Values
 already combined by SAPI remain single header values. Application services close
@@ -330,9 +363,10 @@ Streaming, informational response sequences, and connection upgrades/tunnels nee
 separate transport support.
 
 For PHP-FPM, configure the web server to use `examples/compiled-container/public`
-as its document root and forward application routes to `index.php`. The same
-front controller and SAPI adapter are used. The same socket checks exercise the
-PHP server and ElephC's native web server.
+as its document root. Use `index.php` as the development front controller or
+`compiled.php` after generation for the compiled path. The same SAPI adapter is
+used. The same socket checks exercise development PHP, compiled PHP, and ElephC's
+native web server.
 
 ## Run the native HTTP server
 
@@ -353,7 +387,7 @@ stay under ignored `var/build/`. PHP and Composer are used during the build;
 the resulting server runs as a native executable. The build helper accepts
 `--source` and `--output` for test entry points; output must stay inside `var/`.
 
-Both entry points load explicit declarations through `http-bootstrap.php`,
+The compiled PHP and native entry points load explicit declarations through `http-bootstrap.php`,
 without runtime Composer loading. `WebApplication::serve` has generic PHPDoc
 parameters bounded by `RequestReader` and `ResponseOutput`, and shares the
 container, kernel, middleware, router, endpoint and response policy. The PHP
@@ -364,6 +398,12 @@ ElephC 0.27.6 returns `false` for an empty `php://input` body and does not provi
 `headers_sent()`. The native adapter normalizes empty input and relies on the
 default web bridge's buffered output. These differences stay at the runtime
 boundary. No native-only syntax is needed in shared PHP sources.
+
+`native.php` has no reference to `Runtime/Development`, build analysis, or Composer
+loading. The development entry is separate, with no runtime environment branch in
+the native path. HTTP integration checks also compile and run a copied native
+distribution where development sources, build sources, build configuration, and
+`vendor` are absent. An accidental dependency across that boundary fails the check.
 
 The initial native target uses ElephC's default `worker` isolation. It executes
 the entry point with fresh PHP state for each request, so this example creates
@@ -403,7 +443,7 @@ including local HTTP integration checks.
 composer test
 ```
 
-The command generates containers, runs build-host compiler tests on PHP, and runs
+The command generates containers, runs compiler and development-backend tests on PHP, and runs
 the same runtime PHPUnit cases under PHP and under `elephc test` with
 `--strict-php`. It compares JUnit test identities and outcomes, fails on missing
 cases or any failed or skipped case, and removes temporary reports on exit.
@@ -413,6 +453,12 @@ HTTP check starts temporary PHP and native ElephC servers and runs the same sock
 cases against the compiled application and transport fixture. Native binaries,
 reports and wrappers are removed on success or failure, along with the test
 servers and their worker processes.
+
+Development HTTP checks run in a relocated copy with real Composer dependencies
+and no generated artifacts. They edit routes and introduce a new service provider
+while the PHP server is running, then verify that the next requests use the new
+definitions without building or restarting. The native isolation check uses a
+separate distribution that omits development and build code entirely.
 
 For a single runtime:
 
