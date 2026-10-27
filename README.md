@@ -42,6 +42,8 @@ kernel creates an isolated scope for every request and releases its resources
 before returning the response. The build tool validates explicit dependency graphs
 and emits typed PHP containers for both runtimes. PHP development can interpret
 the same definitions without generating artifacts.
+An independent application skeleton and Composer-installed CLI support creating
+projects, generating static bootstraps and compiling native web servers.
 
 ## Requirements
 
@@ -52,6 +54,83 @@ the same definitions without generating artifacts.
 
 On Linux, native builds also need an assembler, linker, libc development files,
 and the bzip2 development library (`libbz2-dev` on Debian and Ubuntu).
+
+## Create an application
+
+Develop the framework and application skeleton together in this repository.
+The template lives under `stubs/application/` and is an independent Composer
+project using the `App\` namespace and requiring `getphex/phex`.
+
+To try the current checkout before a package release:
+
+```sh
+composer install
+php bin/phex new ../my-app --local
+cd ../my-app
+composer install
+composer serve
+```
+
+Open http://127.0.0.1:8080/ for `{"hello":"world"}`. Development PHP needs no
+build artifacts. Test the typed JSON action:
+
+```sh
+curl -i http://127.0.0.1:8080/greet \
+  -H 'Content-Type: application/json' --data '{"name":"Ada"}'
+```
+
+The result is `{"hello":"Ada"}`. Application classes live in `app/`, service
+definitions in `config/services.php`, and routes in `routes/web.php`.
+The PHP development entry loads Composer through `bootstrap/app.php`.
+
+`new --local` adds a Composer path repository for the current package, with a
+local version alias and mirroring enabled. Installed code resides in the new
+project's `vendor/` directory. The default `new <directory>` template contains
+only a normal package dependency and no checkout paths. It requires an available
+package release or a repository configured by the application owner. Existing
+destinations are rejected, and generated files and installed dependencies are
+excluded from template copies. Composer exposes the installed CLI as
+`vendor/bin/phex` using its binary proxy and runtime API.
+
+For generated PHP and native execution, from the application directory:
+
+```sh
+composer build
+php -S 127.0.0.1:8080 -t public public/compiled.php
+```
+
+```sh
+composer build:native
+./var/build/server --listen 127.0.0.1:8080 --workers 1
+```
+
+`config/build.php` returns `ApplicationConfig`. Building emits an application
+container/matcher plus separate PHP and native bootstraps under `var/generated/`.
+The build host discovers shared PSR-4 types under the configured source roots
+(`App\` in `app/` by default) and orders declaration dependencies, including
+parents, interfaces, traits and override signature types. Use one autoloadable
+type per file. Generated includes use relative paths; the installed project can
+be moved without rebuilding its PHP bootstraps.
+
+The runtime bootstraps load fixed framework declarations, application types and
+generated classes. Native execution loads the native adapter. PHP development
+uses a separate entry and interpreted container. Keep development-only files
+outside the shared `app/` source roots. `Runtime/Http/WebApplication` hosts all
+targets through typed reader/output boundaries and the shared
+`ApplicationContainer` contract, with request and application cleanup.
+An explicit `ErrorReporter` handles unexpected failures at the runtime boundary;
+PHP uses SAPI logging, and the native web reporter logs the exception message.
+
+Build-time validation finishes before artifact replacement. Files are written
+atomically and identical output is retained. `compile` invokes ElephC with an
+argument vector, removes assembly intermediates, and removes a stale executable
+if compilation fails. Adding types or changing routes, providers or declaration
+dependencies requires rebuilding PHP artifacts; native source changes require
+recompilation.
+
+The skeleton stays in this monorepo and can later be extracted into a separate
+project package. The generated application accesses the framework through its
+installed dependency. Persistent PHP workers remain a later host adapter.
 
 ## Try the example
 
@@ -492,7 +571,7 @@ composer analyse
 ```
 
 PHPStan runs at `level: max` against all framework sources, tests, examples, the CLI,
-and generated containers,
+the application skeleton and generated containers,
 with PHP 8.3 as the language target. There is no baseline or ignored-error list.
 PHPUnit extensions provide assertion-aware type checking for the shared tests.
 
@@ -531,6 +610,16 @@ and no generated artifacts. They edit routes and introduce a new service provide
 while the PHP server is running, then verify that the next requests use the new
 definitions without building or restarting. The native isolation check uses a
 separate distribution that omits development and build code entirely.
+
+`composer test:application` creates a project outside this checkout, installs a
+mirrored package without Packagist access, removes its original package source,
+and verifies development PHP, generated PHP and native HTTP behavior. It tests
+live edits, declaration ordering, invalid builds preserving prior artifacts,
+failed native compilation cleanup, PHPStan max on the installed application, and
+relocation. A second compilation runs after removing Composer loading,
+development/build code and configuration from the installed project. The same
+GET, typed POST and error checks pass throughout; temporary projects and servers
+are removed on success and failure.
 
 For a single runtime:
 
