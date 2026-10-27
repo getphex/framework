@@ -3,7 +3,9 @@
 
 from contextlib import contextmanager
 import http.client
+import json
 import os
+import shutil
 import signal
 import sys
 from pathlib import Path
@@ -121,13 +123,77 @@ def check_transport(port):
 
 
 def php_command(router):
-    return ["php", "-d", "display_errors=0", "-d", "zlib.output_compression=0",
+    return ["php", "-d", "display_errors=0", "-d", "zlib.output_compression=0", "-d", "opcache.enable=0",
             "-S", "127.0.0.1:{port}", "-t", str(router.parent), str(router)]
 
 
+def check_development():
+    # Use real relocated Composer dependencies, with no generated directory at all.
+    with tempfile.TemporaryDirectory(prefix="http-development-", dir=ROOT / "var") as directory:
+        project = Path(directory)
+        for name in ("src", "vendor", "examples/compiled-container"):
+            shutil.copytree(ROOT / name, project / name)
+        for name in ("composer.json", "composer.lock"):
+            shutil.copy2(ROOT / name, project / name)
+        example = project / "examples/compiled-container"
+        with server(php_command(example / "public/index.php")) as port:
+            check_application(port)
+            config = example / "container.php"
+            original = config.read_text()
+            changed = original.replace("'/users/{id}'", "'/people/{id}'")
+            check(changed != original, "Route edit did not change the development fixture.")
+            config.write_text(changed)
+            check(request(port, "GET", "/users/7")[0] == 404, "Removed route remained cached in development.")
+            check(request(port, "GET", "/people/7")[0:3:2] == (200, b"user-7"), "New route required a build.")
+            (example / "DevelopmentSessionFactory.php").write_text(
+                "<?php\ndeclare(strict_types=1);\n"
+                "namespace Phex\\Examples\\CompiledContainer;\n"
+                "final class DevelopmentSessionFactory {\n"
+                "    public static function create(): RequestSession { return new RequestSession('changed'); }\n"
+                "}\n"
+            )
+            replacement = changed.replace(
+                "Service::factory(RequestSession::class, Lifetime::Request, Factories::class, 'session')",
+                "Service::factory(RequestSession::class, Lifetime::Request, "
+                "\\Phex\\Examples\\CompiledContainer\\DevelopmentSessionFactory::class, 'create')",
+            )
+            check(replacement != changed, "Service edit did not change the development fixture.")
+            config.write_text(replacement)
+            status, headers, body = request(port, "GET", "/people/7")
+            check((status, body) == (200, b"user-7"), "Changed provider required a build.")
+            check(fields(headers, "X-Request-Id") == ["changed"], "Endpoint did not receive the changed provider.")
+            check(fields(headers, "X-Middleware-Id") == ["changed"], "Middleware did not share the changed provider.")
+        check(not (project / "var/generated").exists(), "Development wrote generated artifacts.")
+    print("PHP development verified without artifacts, including route and provider edits without a restart.", flush=True)
+
+
+def check_native_isolation():
+    # Compile a self-contained distribution where development/build sources cannot be loaded.
+    with tempfile.TemporaryDirectory(prefix="http-isolation-", dir=ROOT / "var") as directory:
+        project = Path(directory)
+        shutil.copytree(ROOT / "src", project / "src", ignore=shutil.ignore_patterns("Development", "Build"))
+        for name in ("hello-world", "json-api", "request-lifecycle", "compiled-container"):
+            shutil.copytree(ROOT / "examples" / name, project / "examples" / name,
+                            ignore=shutil.ignore_patterns("public", "container.php"))
+        artifact = Path("var/generated/example/ApplicationContainer.php")
+        (project / artifact).parent.mkdir(parents=True)
+        shutil.copy2(ROOT / artifact, project / artifact)
+        (project / "composer.json").write_text(json.dumps({"autoload": {"psr-4": {"Phex\\": "src/"}}}))
+        entry = project / "server.php"
+        entry.write_text("<?php\ndeclare(strict_types=1);\nrequire __DIR__.'/examples/compiled-container/native.php';\n")
+        check(not (project / "src/Runtime/Development").exists(), "Native fixture includes the development runtime.")
+        check(not (project / "src/Build").exists(), "Native fixture includes build analysis.")
+        check(not (project / "vendor").exists(), "Native fixture includes Composer dependencies.")
+        subprocess.run(["elephc", "--web", "--strict-php", str(entry)], cwd=project, check=True)
+        with server([str(entry.with_suffix("")), "--listen", "127.0.0.1:{port}", "--workers", "1"]) as port:
+            check_application(port)
+    print("Native graph isolation verified without development runtime, build sources, configuration, or vendor.", flush=True)
+
+
 def main():
+    check_development()
     targets = (
-        (ROOT / "examples/compiled-container/public/index.php", ROOT / "examples/compiled-container/native.php", "application", check_application),
+        (ROOT / "examples/compiled-container/public/compiled.php", ROOT / "examples/compiled-container/native.php", "application", check_application),
         (ROOT / "tests/Runtime/Fixtures/sapi.php", ROOT / "tests/Runtime/Fixtures/native.php", "transport", check_transport),
     )
     with tempfile.TemporaryDirectory(prefix="http-native-", dir=ROOT / "var") as directory:
@@ -140,6 +206,7 @@ def main():
             with server([str(entry.with_suffix("")), "--listen", "127.0.0.1:{port}", "--workers", "1"]) as port:
                 verify(port)
             print(f"HTTP {label} verified on PHP and ElephC.", flush=True)
+    check_native_isolation()
     print("HTTP verified: PHP and native ElephC servers passed the same socket checks.")
 
 if __name__ == "__main__":
