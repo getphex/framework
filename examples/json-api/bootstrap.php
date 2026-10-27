@@ -7,6 +7,7 @@ require_once __DIR__.'/../../src/Contracts/Routing/Endpoint.php';
 require_once __DIR__.'/../../src/Contracts/Routing/EndpointResolver.php';
 require_once __DIR__.'/../../src/Contracts/Routing/Matcher.php';
 require_once __DIR__.'/../../src/Routing/Parameter/InvalidParameter.php';
+require_once __DIR__.'/../../src/Support/IntegerParser.php';
 require_once __DIR__.'/../../src/Routing/Parameter/Parameters.php';
 require_once __DIR__.'/../../src/Routing/Definition/Segment.php';
 require_once __DIR__.'/../../src/Routing/Definition/PathPattern.php';

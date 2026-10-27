@@ -258,6 +258,78 @@ Multiple calls through one `Kernel\Application` share those names and incrementi
 IDs. The current PHP and native HTTP entries create a new container per request;
 durable storage across HTTP requests requires a persistent repository.
 
+## Decode typed query input
+
+Read query parameters from the immutable request URI:
+
+```php
+use Phex\Http\Query\QueryParameters;
+
+$query = QueryParameters::fromRequest($request);
+$page = $query->integer('page', default: 1);
+$active = $query->boolean('active', default: false);
+$sort = $query->get('sort', default: 'asc');
+$tags = $query->values('tag');
+```
+
+`get`, `integer` and `boolean` require one value. Missing parameters use the
+explicit default or raise `422 invalid_input`. A present empty value stays empty:
+`get` returns it, while numeric and boolean readers reject it. Defaults apply only
+to missing parameters. Repeated names are rejected by scalar readers even when
+their values match. `values` returns every value in order, or an empty list for
+a missing parameter. `has` distinguishes missing and empty values.
+
+Integers use checked signed decimal conversion, also used by route parameters.
+Leading zeros and negative zero are accepted; a leading plus, whitespace,
+fractions, exponents and overflow are rejected. Booleans accept exactly `true`,
+`false`, `1` and `0`, with case-sensitive spelling.
+
+Parsing uses `&` separators, the first `=` in each pair, `+` for space and one
+percent-decoding pass. Empty segments are skipped; a bare name has an empty value.
+Names remain literal, including dots, spaces, numeric names and brackets.
+`all()` returns ordered immutable `QueryParameter` objects with string `name`
+and `value` properties. There is no implicit array nesting or name normalization.
+The parser reads neither `$_GET` nor `parse_str`, whose name normalization and
+configuration-dependent limits differ from this explicit contract. See the
+[PHP parsing notes](https://www.php.net/manual/en/function.parse-str.php).
+
+Malformed percent escapes and decoded ASCII control bytes produce
+`400 malformed_query`. Values otherwise remain byte strings, including UTF-8
+bytes; application decoders choose the accepted text encoding and domain shape.
+The defaults allow 8,192 encoded query bytes and 100 nonempty pairs. Both limits
+are explicit positive arguments to `decode` and `fromRequest`; exceeding either
+produces `400 query_limit_exceeded`. These are Phex input rules, with stricter
+escape/control handling than the browser's
+[form URL-encoded parser](https://url.spec.whatwg.org/#urlencoded-parsing).
+
+DTO decoders implement the existing `Decoder<T>` contract and receive the encoded
+query string without its leading `?`. `QueryString::decode` preserves their
+concrete result through a typed closure:
+
+```php
+$input = QueryString::decode(
+    $request,
+    fn (string $query): SearchInput => $this->decoder->decode($query),
+);
+```
+
+`Http\Input\InputErrorMiddleware` maps explicit query and JSON input errors to
+the same JSON response policy. Query field errors use names such as `query.page`.
+Unexpected application and response-encoding failures propagate. The original
+`Http\Json\InputError` factories and `JsonInputMiddleware` name remain available
+through the shared error policy.
+
+The application skeleton includes `SearchInput`, `SearchDecoder` and
+`SearchAction`, with explicit container bindings and a `GET /search` route.
+It returns validated example options, including range and sort validation:
+
+```sh
+curl 'http://127.0.0.1:8080/search?page=2&limit=10&active=true&sort=desc'
+```
+
+The response is `{"page":2,"limit":10,"active":true,"sort":"desc"}`. The route
+works on development PHP, generated PHP and the native executable.
+
 ## Route requests
 
 ```php

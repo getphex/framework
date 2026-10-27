@@ -21,6 +21,18 @@ curl -i http://127.0.0.1:8080/greet \
 The result is `{"hello":"Ada"}`. Invalid JSON returns 400, an unsupported content
 type returns 415, and invalid field values return 422.
 
+Send typed query input:
+
+```sh
+curl 'http://127.0.0.1:8080/search?page=2&limit=10&active=true&sort=desc'
+```
+
+The example returns `{"page":2,"limit":10,"active":true,"sort":"desc"}`.
+`SearchDecoder` maps query parameters to `SearchInput`, validates page/limit
+ranges and the sort order, and rejects unknown parameters. Missing options use
+defaults. Invalid or repeated scalar values return 422; malformed escapes return
+400. `Handlers` applies `InputErrorMiddleware` to both query and JSON input.
+
 Build the generated PHP container, matcher and static bootstraps:
 
 ```sh

@@ -25,6 +25,7 @@ def verify(port, home="/", greeting="world"):
     check(status == 200 and body.startswith(b'{'), f"Standalone home returned {status}: {body!r}")
     check((status, json.loads(body)) == (200, {"hello": greeting}), "The standalone home route failed.")
     check(fields(headers, "Content-Type") == ["application/json"], "Standalone JSON metadata changed.")
+    verify_query(port)
     status, headers, body = request(port, "POST", "/greet", b'{"name":"Ada"}', {"Content-Type": "application/json"})
     check((status, body) == (200, b'{"hello":"Ada"}'), "The standalone typed POST failed.")
     for payload, content_type, expected in ((b'{', "application/json", 400), (b'{}', "application/json", 422), (b'{}', "text/plain", 415)):
@@ -37,6 +38,47 @@ def verify(port, home="/", greeting="world"):
     status, headers, body = request(port, "GET", "/fail")
     check((status, body) == (500, b"Internal Server Error"), "Application failures escaped the shared host policy.")
     check(fields(headers, "Content-Type") == ["text/plain; charset=utf-8"], "Server errors lost the default content type.")
+
+
+def verify_query(port):
+    defaults = {"page": 1, "limit": 20, "active": False, "sort": "asc"}
+    for path, expected in (
+        ("/search", defaults),
+        ("/search?%70age=0002&limit=10&active=true&sort=desc", {"page": 2, "limit": 10, "active": True, "sort": "desc"}),
+        ("/search?page=3&active=0", dict(defaults, page=3)),
+    ):
+        status, headers, body = request(port, "GET", path)
+        check((status, json.loads(body)) == (200, expected), "Standalone typed query decoding failed.")
+        check(fields(headers, "Content-Type") == ["application/json"], "Query output lost its content type.")
+    for query, expected_status, code in (
+        ("page=one", 422, "invalid_input"),
+        ("page=+2", 422, "invalid_input"),
+        ("page=%2B2", 422, "invalid_input"),
+        ("page=9223372036854775808", 422, "invalid_input"),
+        ("page=1&page=2", 422, "invalid_input"),
+        ("page=&page=2", 422, "invalid_input"),
+        ("page=0", 422, "invalid_input"),
+        ("limit=101", 422, "invalid_input"),
+        ("active=yes", 422, "invalid_input"),
+        ("sort=", 422, "invalid_input"),
+        ("sort=descending", 422, "invalid_input"),
+        ("unknown=1", 422, "invalid_input"),
+        ("%FF=1", 422, "invalid_input"),
+        ("page=%", 400, "malformed_query"),
+        ("page=%2", 400, "malformed_query"),
+        ("page=%GG", 400, "malformed_query"),
+        ("%=1", 400, "malformed_query"),
+        ("sort=%00", 400, "malformed_query"),
+        ("&".join(["page=1"] * 101), 400, "query_limit_exceeded"),
+    ):
+        status, headers, body = request(port, "GET", "/search?" + query)
+        result = json.loads(body)
+        check((status, result["error"]) == (expected_status, code), "Standalone query error policy changed.")
+        check(fields(headers, "Content-Type") == ["application/json"], "Query errors lost their content type.")
+        if status == 422:
+            check(bool(result["errors"]), "Query validation errors need field details.")
+    status, _, body = request(port, "GET", "/search")
+    check((status, json.loads(body)) == (200, defaults), "Query state leaked after rejected input.")
 
 
 def main():

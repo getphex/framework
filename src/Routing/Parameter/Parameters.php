@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Phex\Routing\Parameter;
 
 use OutOfBoundsException;
+use Phex\Support\IntegerParser;
 
 final readonly class Parameters
 {
@@ -45,41 +46,12 @@ final readonly class Parameters
 
     public function integer(string $name): int
     {
-        $raw = $this->get($name);
-
-        if ($raw === '') {
+        $value = IntegerParser::parse($this->get($name));
+        if ($value === null) {
             throw new InvalidParameter($name);
         }
 
-        $negative = $raw[0] === '-';
-        $start = $negative ? 1 : 0;
-
-        if (strlen($raw) === $start) {
-            throw new InvalidParameter($name);
-        }
-
-        for ($index = $start; $index < strlen($raw); $index++) {
-            $byte = ord($raw[$index]);
-
-            if ($byte < 48 || $byte > 57) {
-                throw new InvalidParameter($name);
-            }
-        }
-
-        $digits = ltrim(substr($raw, $start), '0');
-
-        if ($digits === '') {
-            return 0;
-        }
-
-        $limit = $negative ? substr((string) PHP_INT_MIN, 1) : (string) PHP_INT_MAX;
-
-        if (strlen($digits) > strlen($limit)
-            || (strlen($digits) === strlen($limit) && strcmp($digits, $limit) > 0)) {
-            throw new InvalidParameter($name);
-        }
-
-        return (int) ($negative ? '-'.$digits : $digits);
+        return $value;
     }
 
     /**
