@@ -43,7 +43,7 @@ final class MatcherEmitter
             }
             $source .= '        $this->route'.$id.' = new \\Phex\\Routing\\Definition\\Route('
                 .Literal::emit($route->method).', '.Literal::emit($route->path)
-                .', new \\Phex\\Container\\Routing\\EndpointReference(\\'.$route->endpoint.'::class), compiledSegments: ['.implode(', ', $segments)."]);\n";
+                .', new \\Phex\\Container\\Routing\\EndpointReference(\\'.$route->endpoint.'::class), compiledSegments: ['.implode(', ', $segments).'], name: '.Literal::emit($route->name).");\n";
         }
         $source .= "    }\n\n    public function match(\\Phex\\Http\\Message\\Request \$request): \\Phex\\Routing\\Matcher\\MatchResult\n    {\n        try {\n            \$parts = \\Phex\\Routing\\Matcher\\PathSegments::fromUri(\$request->uri);\n        } catch (\\InvalidArgumentException) {\n            return \\Phex\\Routing\\Matcher\\MatchResult::badRequest();\n        }\n";
         if ($groups !== []) {

@@ -19,6 +19,7 @@ use Phex\Contracts\Http\Handler;
 use Phex\Contracts\Routing\Endpoint;
 use Phex\Contracts\Routing\EndpointResolver;
 use Phex\Contracts\Routing\Matcher;
+use Phex\Contracts\Routing\UrlGenerator;
 use Phex\Http\Message\Request;
 use Phex\Kernel\Scope\RequestScope;
 use Phex\Routing\Definition\Route;
@@ -39,6 +40,7 @@ final class Analyzer
     public const array BUILTINS = [
         ApplicationScope::class => Lifetime::Application,
         Matcher::class => Lifetime::Application,
+        UrlGenerator::class => Lifetime::Application,
         RequestScope::class => Lifetime::Request,
         Request::class => Lifetime::Request,
         EndpointResolver::class => Lifetime::Request,
@@ -66,8 +68,8 @@ final class Analyzer
                 if ($dependency === null) {
                     continue;
                 }
-                if ($dependency === Matcher::class && $definition->routes === []) {
-                    throw new InvalidContainer('The built-in matcher requires compiled routes.');
+                if (($dependency === Matcher::class || $dependency === UrlGenerator::class) && $definition->routes === []) {
+                    throw new InvalidContainer('The built-in matcher or URL generator requires compiled routes.');
                 }
                 if (!isset($nodes[$dependency]) && !isset(self::BUILTINS[$dependency])) {
                     throw new InvalidContainer('Missing binding: '.$node->type.' -> '.$dependency);
@@ -90,7 +92,7 @@ final class Analyzer
             $lower = strtolower($name);
             if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*$/D', $name) !== 1
                 || preg_match('/^service[0-9]+$/D', $lower) === 1
-                || in_array($lower, ['request', 'create', 'close', 'resolve', 'assertopen', 'ownership', 'matcher', 'handler', 'registerresource'], true)
+                || in_array($lower, ['request', 'create', 'close', 'resolve', 'assertopen', 'ownership', 'matcher', 'urls', 'handler', 'registerresource'], true)
                 || isset($names[$lower])) {
                 throw new InvalidContainer('Invalid or reserved entry name: '.$name);
             }
@@ -108,9 +110,9 @@ final class Analyzer
                 throw new InvalidContainer('Missing endpoint binding: '.$type);
             }
             try {
-                $validated = new Route($route->method, $route->path, new EndpointReference($type));
+                $validated = new Route($route->method, $route->path, new EndpointReference($type), name: $route->name);
                 $routes[] = $validated;
-                $routeNodes[] = new RouteNode($route->method, $route->path, $type, $validated->pattern->segments());
+                $routeNodes[] = new RouteNode($route->method, $route->path, $type, $validated->pattern->segments(), $route->name);
             } catch (InvalidArgumentException $error) {
                 throw new InvalidContainer('Invalid compiled route: '.$error->getMessage(), previous: $error);
             }

@@ -14,5 +14,11 @@ final readonly class RouteNode
      * @param class-string<Endpoint> $endpoint
      * @param list<Segment> $segments
      */
-    public function __construct(public string $method, public string $path, public string $endpoint, public array $segments) {}
+    public function __construct(
+        public string $method,
+        public string $path,
+        public string $endpoint,
+        public array $segments,
+        public ?string $name = null,
+    ) {}
 }

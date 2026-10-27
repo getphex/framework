@@ -13,6 +13,7 @@ use Phex\Contracts\Kernel\ScopeResource;
 use Phex\Contracts\Routing\Endpoint;
 use Phex\Contracts\Routing\EndpointResolver;
 use Phex\Contracts\Routing\Matcher;
+use Phex\Contracts\Routing\UrlGenerator;
 use Phex\Http\Message\Request;
 use Phex\Kernel\Scope\RequestScope;
 use Phex\Routing\Router;
@@ -96,6 +97,9 @@ final class DevelopmentRequest implements ScopeResource, EndpointResolver
         }
         if ($type === Matcher::class) {
             return $this->application->matcher();
+        }
+        if ($type === UrlGenerator::class) {
+            return $this->application->urls();
         }
         if ($type === ApplicationScope::class) {
             return $this->application->get(ApplicationScope::class);

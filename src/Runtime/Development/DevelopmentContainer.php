@@ -15,9 +15,11 @@ use Phex\Container\Routing\EndpointReference;
 use Phex\Contracts\Http\Handler;
 use Phex\Contracts\Container\ApplicationContainer;
 use Phex\Contracts\Routing\Matcher;
+use Phex\Contracts\Routing\UrlGenerator;
 use Phex\Kernel\Scope\RequestScope;
 use Phex\Routing\Definition\Route;
 use Phex\Routing\Matcher\TableMatcher;
+use Phex\Routing\Url\TableUrlGenerator;
 use Throwable;
 
 /** PHP development only. Load from a dedicated entry point outside the native graph. */
@@ -28,6 +30,7 @@ final class DevelopmentContainer implements ApplicationContainer
     private readonly ApplicationScope $resources;
     private readonly ServiceCache $services;
     private readonly Matcher $routes;
+    private readonly UrlGenerator $urls;
 
     /** @var array<string, string> */
     private array $types = [];
@@ -43,9 +46,10 @@ final class DevelopmentContainer implements ApplicationContainer
         try {
             $routes = [];
             foreach ($this->graph->routes as $route) {
-                $routes[] = new Route($route->method, $route->path, new EndpointReference($route->endpoint));
+                $routes[] = new Route($route->method, $route->path, new EndpointReference($route->endpoint), name: $route->name);
             }
             $this->routes = new TableMatcher($routes);
+            $this->urls = new TableUrlGenerator($routes);
             foreach ($this->graph->nodes as $node) {
                 if ($node->lifetime === Lifetime::Application) {
                     $this->service($node->type);
@@ -140,11 +144,24 @@ final class DevelopmentContainer implements ApplicationContainer
         if ($type === Matcher::class) {
             return $this->matcher();
         }
+        if ($type === UrlGenerator::class) {
+            return $this->urls();
+        }
         $node = $this->graph->nodes[$type] ?? throw new LogicException('Unknown application service: '.$type);
         if ($node->lifetime === Lifetime::Request) {
             throw new LogicException('Application services cannot resolve request state.');
         }
 
         return $this->services->resolve($node, $this->service(...));
+    }
+
+    public function urls(): UrlGenerator
+    {
+        $this->assertOpen();
+        if ($this->graph->routes === []) {
+            throw new LogicException('The container has no routes.');
+        }
+
+        return $this->urls;
     }
 }

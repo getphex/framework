@@ -12,6 +12,7 @@ use Phex\Container\Definition\Lifetime;
 use Phex\Container\Lifetime\ApplicationScope;
 use Phex\Contracts\Routing\EndpointResolver;
 use Phex\Contracts\Routing\Matcher;
+use Phex\Contracts\Routing\UrlGenerator;
 use Phex\Http\Message\Request;
 use Phex\Kernel\Scope\RequestScope;
 
@@ -51,6 +52,7 @@ final class ContainerEmitter
         $source .= "\n{\n    private readonly \\Phex\\Container\\Lifetime\\ApplicationScope \$resources;\n";
         if ($graph->definition->routes !== []) {
             $source .= "    private readonly \\Phex\\Contracts\\Routing\\Matcher \$routes;\n";
+            $source .= "    private readonly \\Phex\\Contracts\\Routing\\UrlGenerator \$urls;\n";
         }
         foreach ($graph->nodes as $type => $node) {
             if ($node->lifetime === Lifetime::Application) {
@@ -63,6 +65,7 @@ final class ContainerEmitter
         }
         if ($graph->definition->routes !== []) {
             $source .= "            \$this->routes = new \\".$className."Matcher();\n";
+            $source .= "            \$this->urls = new \\".$className."UrlGenerator();\n";
         }
         foreach ($graph->nodes as $type => $node) {
             if ($node->lifetime === Lifetime::Application) {
@@ -76,6 +79,7 @@ final class ContainerEmitter
         $source .= "\n    public function close(): void\n    {\n        \$this->resources->close();\n    }\n\n    /** @internal */\n    public function ownership(): \\Phex\\Container\\Lifetime\\ApplicationScope\n    {\n        return \$this->resources;\n    }\n\n    /** @internal */\n    public function assertOpen(): void\n    {\n        if (\$this->resources->isClosed()) {\n            throw new \\LogicException('The application container is closed.');\n        }\n    }\n";
         if ($graph->definition->routes !== []) {
             $source .= "\n    /** @internal */\n    public function matcher(): \\Phex\\Contracts\\Routing\\Matcher\n    {\n        \$this->assertOpen();\n        return \$this->routes;\n    }\n";
+            $source .= "\n    public function urls(): \\Phex\\Contracts\\Routing\\UrlGenerator\n    {\n        \$this->assertOpen();\n        return \$this->urls;\n    }\n";
         }
         $source .= "\n    public function request(\\Phex\\Kernel\\Scope\\RequestScope \$scope): \\".$className."Request\n    {\n        \$this->assertOpen();\n        \$context = \$scope->context(\$this);\n        if (\$context instanceof \\".$className."Request) {\n            return \$context;\n        }\n        \$created = new \\".$className."Request(\$this, \$scope);\n        \$scope->bindContext(\$this, \$created);\n        return \$created;\n    }\n";
         if ($hasHandler) {
@@ -117,6 +121,7 @@ final class ContainerEmitter
         }
         $source .= "}\n";
         $source .= (new MatcherEmitter())->emit($graph->routes, $short.'Matcher');
+        $source .= (new UrlGeneratorEmitter())->emit($graph->routes, $short.'UrlGenerator');
         // Syntax-check only. The build process never evaluates emitted code.
         if (token_get_all($source, TOKEN_PARSE) === []) {
             throw new InvalidContainer('The generated artifact is empty.');
@@ -171,6 +176,7 @@ final class ContainerEmitter
         return match ($type) {
             ApplicationScope::class => $request ? '$this->application->ownership()' : '$this->resources',
             Matcher::class => $request ? '$this->application->matcher()' : '$this->matcher()',
+            UrlGenerator::class => $request ? '$this->application->urls()' : '$this->urls()',
             Request::class => '$this->scope->request',
             RequestScope::class => '$this->scope',
             EndpointResolver::class => '$this',

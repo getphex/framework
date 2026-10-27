@@ -19,9 +19,17 @@ final readonly class TableMatcher implements Matcher
     public function __construct(array $routes)
     {
         $ordered = [];
+        $names = [];
 
         foreach ($routes as $item) {
             $route = self::route($item);
+            $name = $route->name;
+            if ($name !== null) {
+                if (isset($names[$name])) {
+                    throw new InvalidArgumentException('Duplicate route name: '.$name);
+                }
+                $names[$name] = true;
+            }
             $next = [];
             $inserted = false;
 
