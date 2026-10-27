@@ -20,12 +20,13 @@ def run(command, project):
     return result.stdout
 
 
-def verify(port, home="/", greeting="world"):
+def verify(port, home="/", greeting="world", search="/search"):
     status, headers, body = request(port, "GET", home)
     check(status == 200 and body.startswith(b'{'), f"Standalone home returned {status}: {body!r}")
     check((status, json.loads(body)) == (200, {"hello": greeting}), "The standalone home route failed.")
     check(fields(headers, "Content-Type") == ["application/json"], "Standalone JSON metadata changed.")
-    verify_query(port)
+    check(fields(headers, "Link") == [f'<{search}>; rel="search"'], "Named route generation returned a stale search link.")
+    verify_query(port, search)
     status, headers, body = request(port, "POST", "/greet", b'{"name":"Ada"}', {"Content-Type": "application/json"})
     check((status, body) == (200, b'{"hello":"Ada"}'), "The standalone typed POST failed.")
     for payload, content_type, expected in ((b'{', "application/json", 400), (b'{}', "application/json", 422), (b'{}', "text/plain", 415)):
@@ -40,14 +41,14 @@ def verify(port, home="/", greeting="world"):
     check(fields(headers, "Content-Type") == ["text/plain; charset=utf-8"], "Server errors lost the default content type.")
 
 
-def verify_query(port):
+def verify_query(port, search):
     defaults = {"page": 1, "limit": 20, "active": False, "sort": "asc"}
     for path, expected in (
         ("/search", defaults),
         ("/search?%70age=0002&limit=10&active=true&sort=desc", {"page": 2, "limit": 10, "active": True, "sort": "desc"}),
         ("/search?page=3&active=0", dict(defaults, page=3)),
     ):
-        status, headers, body = request(port, "GET", path)
+        status, headers, body = request(port, "GET", path.replace("/search", search, 1))
         check((status, json.loads(body)) == (200, expected), "Standalone typed query decoding failed.")
         check(fields(headers, "Content-Type") == ["application/json"], "Query output lost its content type.")
     for query, expected_status, code in (
@@ -71,13 +72,13 @@ def verify_query(port):
         ("sort=%00", 400, "malformed_query"),
         ("&".join(["page=1"] * 101), 400, "query_limit_exceeded"),
     ):
-        status, headers, body = request(port, "GET", "/search?" + query)
+        status, headers, body = request(port, "GET", search + "?" + query)
         result = json.loads(body)
         check((status, result["error"]) == (expected_status, code), "Standalone query error policy changed.")
         check(fields(headers, "Content-Type") == ["application/json"], "Query errors lost their content type.")
         if status == 422:
             check(bool(result["errors"]), "Query validation errors need field details.")
-    status, _, body = request(port, "GET", "/search")
+    status, _, body = request(port, "GET", search)
     check((status, json.loads(body)) == (200, defaults), "Query state leaked after rejected input.")
 
 
@@ -118,7 +119,7 @@ def main():
         with server(php_command(project / "public/index.php"), error_log_marker="private failure") as port:
             verify(port)
             routes = project / "routes/web.php"
-            routes.write_text(routes.read_text().replace("'/'", "'/hello'"))
+            routes.write_text(routes.read_text().replace("'/'", "'/hello'").replace("'/search'", "'/find'"))
             support = project / "app/Support"
             support.mkdir()
             (support / "ZGreeting.php").write_text("<?php namespace App\\Support; interface ZGreeting { public function greeting(): string; }\n")
@@ -127,7 +128,7 @@ def main():
             (support / "AGreeting.php").write_text("<?php namespace App\\Support; final class AGreeting extends ZBase implements ZGreeting { use YGreetingTrait; }\n")
             action = project / "app/Http/Action/HomeAction.php"
             action.write_text(action.read_text().replace("'world'", "(new \\App\\Support\\AGreeting())->greeting()"))
-            verify(port, "/hello", "universe")
+            verify(port, "/hello", "universe", "/find")
             check(request(port, "GET", "/")[0] == 404, "Development retained an old route.")
         check(not (project / "var/generated").exists(), "Development wrote build artifacts.")
         print("Standalone PHP verified without artifacts or the source package, including live route/class edits.", flush=True)
@@ -149,6 +150,12 @@ def main():
         invalid = subprocess.run(["php", "vendor/bin/phex", "build", "config/build.php"], cwd=project, capture_output=True)
         check(invalid.returncode != 0, "Invalid route entries were accepted.")
         check(snapshots == {path.name: path.read_bytes() for path in generated.iterdir()}, "Invalid configuration changed existing artifacts.")
+        route_file.write_text(valid_routes)
+        duplicate_name = valid_routes.replace("return [", "return [\n    new EndpointRoute('GET', '/duplicate-name', \\App\\Http\\Action\\HomeAction::class, name: 'home'),")
+        route_file.write_text(duplicate_name)
+        invalid = subprocess.run(["php", "vendor/bin/phex", "build", "config/build.php"], cwd=project, capture_output=True)
+        check(invalid.returncode != 0, "Duplicate route names were accepted.")
+        check(snapshots == {path.name: path.read_bytes() for path in generated.iterdir()}, "Duplicate route names changed existing artifacts.")
         route_file.write_text(valid_routes)
         broken = project / "app/Broken.php"
         broken.write_text("<?php namespace App;\n")
@@ -177,9 +184,9 @@ def main():
         project.rename(moved)
         project = moved
         with server(php_command(project / "public/compiled.php"), error_log_marker="private failure") as port:
-            verify(port, "/hello", "universe")
+            verify(port, "/hello", "universe", "/find")
         with server([str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"], error_log_marker="private failure") as port:
-            verify(port, "/hello", "universe")
+            verify(port, "/hello", "universe", "/find")
         print("Installed build/native CLI, PHPStan max, declaration order and project relocation verified.", flush=True)
 
         installed = project / "vendor/getphex/phex"
@@ -192,9 +199,9 @@ def main():
         (project / "var/build/server").unlink()
         run(["elephc", "--web", "--strict-php", str(project / "var/build/server.php")], project)
         with server(php_command(project / "public/compiled.php"), error_log_marker="private failure") as port:
-            verify(port, "/hello", "universe")
+            verify(port, "/hello", "universe", "/find")
         with server([str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"], error_log_marker="private failure") as port:
-            verify(port, "/hello", "universe")
+            verify(port, "/hello", "universe", "/find")
         print("Standalone compiled PHP/native verified without Composer loading, development/build code or configuration.", flush=True)
     return 0
 

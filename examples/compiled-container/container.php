@@ -33,8 +33,8 @@ return new BuildConfig(new Container([
     'endpoint' => UserEndpoint::class,
     'connection' => Connection::class,
 ], [
-    new EndpointRoute('GET', '/users/{id}', UserEndpoint::class),
-    new EndpointRoute('POST', '/users', CreateUserEndpoint::class),
+    new EndpointRoute('GET', '/users/{id}', UserEndpoint::class, name: 'users.show'),
+    new EndpointRoute('POST', '/users', CreateUserEndpoint::class, name: 'users.create'),
 ], Handler::class),
     'Phex\\Examples\\CompiledContainer\\Generated\\ApplicationContainer',
     __DIR__.'/../../var/generated/example/ApplicationContainer.php',

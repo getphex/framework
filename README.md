@@ -203,7 +203,7 @@ $input = JsonBody::decode(
 $user = $this->users->create($input);
 
 return JsonResponse::create($user->toArray(), 201, new Headers([
-    'Location' => ['/users/'.$user->id],
+    'Location' => [$this->urls->generate('users.show', ['id' => $user->id])],
 ]));
 ```
 
@@ -386,6 +386,57 @@ $name = $parameters->map('name', fn (string $raw): string => strtoupper($raw));
 
 Run the routing example with `php examples/json-api/main.php`. It demonstrates a
 health endpoint, an integer user parameter, a missing path, and a rejected method.
+
+## Generate URLs from named routes
+
+Assign an optional name when defining a route:
+
+```php
+new EndpointRoute('GET', '/users/{id}', UserEndpoint::class, name: 'users.show');
+```
+
+Inject `Phex\Contracts\Routing\UrlGenerator` into an action or service, then
+generate the path from its name:
+
+```php
+$path = $this->urls->generate('users.show', ['id' => 42]);
+// /users/42
+```
+
+Names are case-sensitive and unique across the entire route table, including
+different HTTP methods. They contain 1 to 128 ASCII characters, start with a
+letter or underscore, and continue with letters, digits, underscores, dots or
+hyphens. Unnamed routes keep their existing matching behavior. `Route` also
+accepts a named `name` argument for explicitly assembled routing tables.
+
+Parameters are named string or integer values. Every placeholder is required;
+unknown routes, missing/extra parameters and invalid values raise
+`UrlGenerationFailed`, a programming error that propagates through input
+middleware. Zero and negative integers are accepted. Each value is encoded as
+one path segment: `a/b` becomes `a%2Fb`, a space becomes `%20`, plus becomes
+`%2B`, and an existing `%2F` value becomes `%252F`. Literal pattern segments use
+the same byte encoding, with UTF-8 and other non-ASCII bytes percent-encoded.
+
+Generated paths begin with a single slash. Named patterns cannot begin with
+`//` or contain literal `.`/`..` segments; parameter values cannot be empty,
+contain ASCII controls, or equal `.`/`..`. These constraints keep generated
+references on the current origin and avoid the browser's
+[dot-segment normalization](https://url.spec.whatwg.org/#single-dot-path-segment).
+Interior empty segments and trailing slashes remain significant and are preserved.
+
+`UrlGenerator` is a reserved application-scoped container dependency when routes
+are configured. The generated container exposes it through `urls()`. PHP
+development uses `TableUrlGenerator` with the same definitions. Compiled builds
+emit `<Container>UrlGenerator` beside the matcher, with fixed name branches,
+pre-encoded literal segments and direct parameter lookups. Generation performs
+no runtime pattern parsing, reflection or class generation. Explicitly assembled
+applications can construct `TableUrlGenerator` from their list of `Route` values.
+
+The compiled-container example uses `users.show` for its `201` response Location.
+The application skeleton names its home, greeting and search routes; `HomeAction`
+returns a `Link: </search>; rel="search"` header through the injected generator.
+Development route edits update that link on subsequent PHP requests. Generated
+PHP artifacts and native binaries use the route definitions from their build.
 
 ## Manage the request lifecycle
 

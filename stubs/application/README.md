@@ -33,6 +33,13 @@ ranges and the sort order, and rejects unknown parameters. Missing options use
 defaults. Invalid or repeated scalar values return 422; malformed escapes return
 400. `Handlers` applies `InputErrorMiddleware` to both query and JSON input.
 
+Routes are named `home`, `greet` and `search`. Inject
+`Phex\Contracts\Routing\UrlGenerator` to generate paths from those definitions;
+`HomeAction` demonstrates this with a `Link` header for the search route.
+Route names are unique across HTTP methods. Path parameters are explicit string
+or integer values and are encoded as complete segments. PHP development picks
+up route edits on the next request; compiled targets use the generated registry.
+
 Build the generated PHP container, matcher and static bootstraps:
 
 ```sh
