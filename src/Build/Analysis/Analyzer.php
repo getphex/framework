@@ -32,7 +32,7 @@ use ReflectionUnionType;
 use ReflectionIntersectionType;
 use InvalidArgumentException;
 
-/** Build-host analysis only. No reflection is used by emitted containers. */
+/** Build and PHP development bootstrap analysis. Emitted containers never load this class. */
 final class Analyzer
 {
     /** @var array<class-string, Lifetime> */
@@ -128,7 +128,10 @@ final class Analyzer
         return new Graph($nodes, $definition, $routeNodes);
     }
 
-    /** @param Service<object> $service */
+    /**
+     * @param class-string $type
+     * @param Service<object> $service
+     */
     private function node(string $type, Service $service): Node
     {
         $provider = new ReflectionClass(self::className($service->provider));
@@ -140,7 +143,6 @@ final class Analyzer
                 throw new InvalidContainer('Invalid constructor provider for '.$type.': '.$provider->getName());
             }
             $method = $provider->getConstructor();
-            $call = 'new \\'.$provider->getName();
             $resource = $provider->implementsInterface(ScopeResource::class);
         } else {
             if (!$provider->hasMethod($service->method)) {
@@ -159,14 +161,13 @@ final class Analyzer
             $returned = new ReflectionClass($returnName);
             $resource = $returned->implementsInterface(ScopeResource::class);
             $possibleResource = !$resource && !$returned->isFinal();
-            $call = '\\'.$provider->getName().'::'.$method->getName();
         }
         $arguments = [];
         foreach ($method?->getParameters() ?? [] as $parameter) {
             $arguments[] = $this->argument($parameter, $type, $provider->getName());
         }
 
-        return new Node($type, $service->lifetime, $call, $arguments, $resource, $possibleResource);
+        return new Node($type, $service->lifetime, $provider->getName(), $service->method === null ? null : $method->getName(), $arguments, $resource, $possibleResource);
     }
 
     /** @param class-string $provider */
@@ -188,7 +189,10 @@ final class Analyzer
             return new Argument($this->namedType($type, $method, $provider));
         }
         if ($parameter->isDefaultValueAvailable()) {
-            return new Argument(null, Literal::emit($parameter->getDefaultValue()));
+            $value = $parameter->getDefaultValue();
+            Literal::emit($value);
+
+            return new Argument(null, $value);
         }
 
         throw new InvalidContainer('Dependency needs a named object type or a literal default in '.$service.'::$'.$parameter->getName().'. Use an explicit factory.');

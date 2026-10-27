@@ -7,7 +7,7 @@ namespace Phex\Build\Graph;
 use Phex\Contracts\Routing\Endpoint;
 use Phex\Routing\Definition\Segment;
 
-/** @internal Validated route metadata, consumed only by build emitters. */
+/** @internal Validated route metadata for build emitters and PHP development bootstrap. */
 final readonly class RouteNode
 {
     /**

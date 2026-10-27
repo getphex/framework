@@ -143,9 +143,10 @@ final class ContainerEmitter
         $arguments = [];
         foreach ($node->arguments as $argument) {
             $type = $argument->service;
-            $arguments[] = $type === null ? $argument->literal : $this->dependency($type, $request);
+            $arguments[] = $type === null ? Literal::emit($argument->default) : $this->dependency($type, $request);
         }
-        $construction = '        $value = '.$node->call.'('.implode(', ', $arguments).");\n";
+        $call = $node->method === null ? 'new \\'.$node->provider : '\\'.$node->provider.'::'.$node->method;
+        $construction = '        $value = '.$call.'('.implode(', ', $arguments).");\n";
         $owner = $request ? '$this->scope' : '$this->resources';
         if ($node->resource) {
             $construction .= '        '.$owner."->own(\$value);\n";
