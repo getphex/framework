@@ -9,12 +9,23 @@ use Phex\Contracts\Kernel\ScopeResource;
 final class MemoryUserRepository implements UserRepository, ScopeResource
 {
     public int $closes = 0;
+    private int $nextId = 1;
+    /** @var array<int, string> */
+    private array $names = [];
 
     public function __construct(public readonly Connection $connection) {}
 
     public function name(int $id): string
     {
-        return 'user-'.$id;
+        return (string) ($this->names[$id] ?? 'user-'.$id);
+    }
+
+    public function create(string $name): CreatedUser
+    {
+        $id = $this->nextId++;
+        $this->names[$id] = $name;
+
+        return new CreatedUser($id, $name);
     }
 
     public function close(): void

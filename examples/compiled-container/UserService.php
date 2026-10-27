@@ -12,4 +12,9 @@ final readonly class UserService
     {
         return $this->repository->name($id);
     }
+
+    public function create(CreateUserInput $input): CreatedUser
+    {
+        return $this->repository->create($input->name);
+    }
 }

@@ -35,5 +35,7 @@ try {
     $response = new Response(status: 500, body: 'Internal Server Error');
 }
 
-$response = $response->withHeaders($response->headers->with('Content-Type', ['text/plain; charset=utf-8']));
+if (!$response->headers->has('Content-Type')) {
+    $response = $response->withHeaders($response->headers->with('Content-Type', ['text/plain; charset=utf-8']));
+}
 (new BufferedResponseEmitter(new SapiOutput()))->emit($response, $requestMethod);
