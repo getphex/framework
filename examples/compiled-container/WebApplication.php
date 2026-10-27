@@ -6,42 +6,22 @@ namespace Phex\Examples\CompiledContainer;
 
 use Phex\Contracts\Runtime\RequestReader;
 use Phex\Contracts\Runtime\ResponseOutput;
+use Phex\Contracts\Runtime\ErrorReporter;
 use Phex\Examples\CompiledContainer\Generated\ApplicationContainer;
-use Phex\Http\Message\Response;
-use Phex\Kernel\Application;
-use Phex\Runtime\Http\BufferedResponseEmitter;
-use Phex\Runtime\Http\InvalidRequest;
-use Throwable;
+use Phex\Runtime\Http\WebApplication as WebHost;
 
 final class WebApplication
 {
     /**
      * @template TReader of RequestReader
      * @template TOutput of ResponseOutput
+     * @template TReporter of ErrorReporter
      * @param TReader $reader
      * @param TOutput $output
+     * @param TReporter $errors
      */
-    public static function serve(RequestReader $reader, ResponseOutput $output, string $requestMethod): void
+    public static function serve(RequestReader $reader, ResponseOutput $output, ErrorReporter $errors, string $requestMethod): void
     {
-        try {
-            $container = new ApplicationContainer();
-            try {
-                $request = $reader->read();
-                $requestMethod = $request->method;
-                $response = (new Application($container))->handle($request);
-            } finally {
-                $container->close();
-            }
-        } catch (InvalidRequest) {
-            $response = new Response(status: 400, body: 'Bad Request');
-        } catch (Throwable $error) {
-            error_log((string) $error);
-            $response = new Response(status: 500, body: 'Internal Server Error');
-        }
-
-        if (!$response->headers->has('Content-Type')) {
-            $response = $response->withHeaders($response->headers->with('Content-Type', ['text/plain; charset=utf-8']));
-        }
-        (new BufferedResponseEmitter($output))->emit($response, $requestMethod);
+        WebHost::serve($reader, $output, fn (): ApplicationContainer => new ApplicationContainer(), $errors, $requestMethod);
     }
 }

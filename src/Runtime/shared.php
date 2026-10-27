@@ -1,0 +1,50 @@
+<?php
+
+declare(strict_types=1);
+
+// Declaration-only runtime graph shared by compiled PHP and ElephC.
+require_once __DIR__.'/../Contracts/Http/Handler.php';
+require_once __DIR__.'/../Contracts/Http/Middleware.php';
+require_once __DIR__.'/../Contracts/Http/Decoder.php';
+require_once __DIR__.'/../Contracts/Kernel/HandlerFactory.php';
+require_once __DIR__.'/../Contracts/Kernel/ScopeResource.php';
+require_once __DIR__.'/../Contracts/Container/ApplicationContainer.php';
+require_once __DIR__.'/../Contracts/Routing/Endpoint.php';
+require_once __DIR__.'/../Contracts/Routing/EndpointResolver.php';
+require_once __DIR__.'/../Contracts/Routing/Matcher.php';
+require_once __DIR__.'/../Contracts/Runtime/RequestReader.php';
+require_once __DIR__.'/../Contracts/Runtime/ErrorReporter.php';
+require_once __DIR__.'/../Contracts/Runtime/ResponseOutput.php';
+require_once __DIR__.'/../Contracts/Runtime/ResponseEmitter.php';
+require_once __DIR__.'/../Http/Message/Token.php';
+require_once __DIR__.'/../Http/Message/Headers.php';
+require_once __DIR__.'/../Http/Message/Request.php';
+require_once __DIR__.'/../Http/Message/Response.php';
+require_once __DIR__.'/../Http/Middleware/Pipeline.php';
+require_once __DIR__.'/../Http/Json/InputError.php';
+require_once __DIR__.'/../Http/Json/JsonObject.php';
+require_once __DIR__.'/../Http/Json/JsonBody.php';
+require_once __DIR__.'/../Http/Json/JsonResponse.php';
+require_once __DIR__.'/../Http/Json/JsonInputMiddleware.php';
+require_once __DIR__.'/../Routing/Parameter/InvalidParameter.php';
+require_once __DIR__.'/../Routing/Parameter/Parameters.php';
+require_once __DIR__.'/../Routing/Definition/Segment.php';
+require_once __DIR__.'/../Routing/Definition/PathPattern.php';
+require_once __DIR__.'/../Routing/Definition/Route.php';
+require_once __DIR__.'/../Routing/Matcher/MatchStatus.php';
+require_once __DIR__.'/../Routing/Matcher/MatchResult.php';
+require_once __DIR__.'/../Routing/Matcher/PathSegments.php';
+require_once __DIR__.'/../Routing/Router.php';
+require_once __DIR__.'/../Kernel/Scope/CleanupFailed.php';
+require_once __DIR__.'/../Kernel/Scope/CleanupErrors.php';
+require_once __DIR__.'/../Kernel/Scope/ResourceScope.php';
+require_once __DIR__.'/../Kernel/Scope/ScopeContext.php';
+require_once __DIR__.'/../Kernel/Scope/RequestScope.php';
+require_once __DIR__.'/../Kernel/Application.php';
+require_once __DIR__.'/../Container/Lifetime/ApplicationScope.php';
+require_once __DIR__.'/../Container/Routing/EndpointReference.php';
+require_once __DIR__.'/Http/InvalidRequest.php';
+require_once __DIR__.'/Http/BufferedResponseEmitter.php';
+require_once __DIR__.'/Http/SapiHeaders.php';
+require_once __DIR__.'/Http/WebApplication.php';
+require_once __DIR__.'/Fpm/ServerRequest.php';

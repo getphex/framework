@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__.'/../request-lifecycle/bootstrap.php';
+require_once __DIR__.'/../../src/Contracts/Container/ApplicationContainer.php';
 require_once __DIR__.'/../../src/Container/Lifetime/ApplicationScope.php';
 require_once __DIR__.'/../../src/Container/Routing/EndpointReference.php';
 require_once __DIR__.'/../../src/Contracts/Http/Decoder.php';

@@ -8,12 +8,12 @@ use LogicException;
 use Phex\Build\Analysis\Analyzer;
 use Phex\Build\Graph\Graph;
 use Phex\Container\Definition\Container;
+use Phex\Container\Definition\DefinitionLoader;
 use Phex\Container\Definition\Lifetime;
 use Phex\Container\Lifetime\ApplicationScope;
 use Phex\Container\Routing\EndpointReference;
 use Phex\Contracts\Http\Handler;
-use Phex\Contracts\Kernel\HandlerFactory;
-use Phex\Contracts\Kernel\ScopeResource;
+use Phex\Contracts\Container\ApplicationContainer;
 use Phex\Contracts\Routing\Matcher;
 use Phex\Kernel\Scope\RequestScope;
 use Phex\Routing\Definition\Route;
@@ -21,7 +21,7 @@ use Phex\Routing\Matcher\TableMatcher;
 use Throwable;
 
 /** PHP development only. Load from a dedicated entry point outside the native graph. */
-final class DevelopmentContainer implements HandlerFactory, ScopeResource
+final class DevelopmentContainer implements ApplicationContainer
 {
     /** @internal */
     public readonly Graph $graph;
@@ -55,6 +55,11 @@ final class DevelopmentContainer implements HandlerFactory, ScopeResource
             $this->resources->close($failure);
             throw $failure;
         }
+    }
+
+    public static function fromFile(string $path): DevelopmentContainer
+    {
+        return new DevelopmentContainer(DefinitionLoader::container($path));
     }
 
     /**
