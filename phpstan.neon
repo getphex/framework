@@ -10,6 +10,7 @@ parameters:
         - tests
         - examples
         - bin/phex
+        - stubs/application
         - var/generated
     tmpDir: var/cache/phpstan
     parallel:

@@ -5,22 +5,52 @@ declare(strict_types=1);
 
 use Phex\Build\Compiler\BuildConfig;
 use Phex\Build\Compiler\ContainerCompiler;
+use Phex\Build\Compiler\ApplicationConfig;
+use Phex\Build\Compiler\ApplicationBuilder;
+use Phex\Build\Compiler\NativeCompiler;
+use Phex\Console\ProjectCreator;
 
-require __DIR__.'/../vendor/autoload.php';
-
-if (!isset($argv) || count($argv) !== 3 || $argv[1] !== 'build') {
-    fwrite(STDERR, "Usage: php bin/phex build <config.php>\n");
+$autoload = $GLOBALS['_composer_autoload_path'] ?? __DIR__.'/../vendor/autoload.php';
+if (!is_string($autoload) || !is_file($autoload)) {
+    fwrite(STDERR, "Install Composer dependencies before running phex.\n");
     exit(1);
+}
+require $autoload;
+
+$usage = "Usage:\n  phex new <directory> [--local]\n  phex build <config.php>\n  phex compile <config.php>\n";
+if (isset($argv) && count($argv) === 2 && in_array($argv[1], ['--help', '-h'], true)) {
+    fwrite(STDOUT, $usage);
+    exit(0);
 }
 
 try {
-    // Trusted, build-time project configuration. Never loaded on the request path.
-    $config = require $argv[2];
-    if (!$config instanceof BuildConfig) {
-        throw new InvalidArgumentException('Build configuration must return a BuildConfig.');
+    if (!isset($argv) || count($argv) < 3) {
+        throw new InvalidArgumentException($usage);
     }
-    $changed = (new ContainerCompiler())->build($config);
-    fwrite(STDOUT, ($changed ? 'Generated ' : 'Already current: ').$config->output."\n");
+    if ($argv[1] === 'new' && (count($argv) === 3 || (count($argv) === 4 && $argv[3] === '--local'))) {
+        $created = (new ProjectCreator())->create($argv[2], count($argv) === 4);
+        fwrite(STDOUT, 'Created '.$created."\nRun composer install in the new project.\n");
+        exit(0);
+    }
+    if (count($argv) !== 3 || !in_array($argv[1], ['build', 'compile'], true)) {
+        throw new InvalidArgumentException($usage);
+    }
+    // Trusted project configuration is loaded only on the build host.
+    $config = require $argv[2];
+    if ($config instanceof ApplicationConfig) {
+        if ($argv[1] === 'compile') {
+            fwrite(STDOUT, 'Native HTTP executable: '.(new NativeCompiler())->compile($config)."\n");
+        } else {
+            foreach ((new ApplicationBuilder())->build($config) as $path => $changed) {
+                fwrite(STDOUT, ($changed ? 'Generated ' : 'Already current: ').$path."\n");
+            }
+        }
+    } elseif ($config instanceof BuildConfig && $argv[1] === 'build') {
+        $changed = (new ContainerCompiler())->build($config);
+        fwrite(STDOUT, ($changed ? 'Generated ' : 'Already current: ').$config->output."\n");
+    } else {
+        throw new InvalidArgumentException('Build configuration must return BuildConfig or ApplicationConfig; compile requires ApplicationConfig.');
+    }
 } catch (Throwable $error) {
     fwrite(STDERR, $error->getMessage()."\n");
     exit(1);

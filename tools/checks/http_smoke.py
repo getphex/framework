@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 @contextmanager
-def server(command):
+def server(command, *, error_log_marker=None):
     with socket.socket() as reservation:
         reservation.bind(("127.0.0.1", 0))
         port = reservation.getsockname()[1]
@@ -41,6 +41,10 @@ def server(command):
                         raise RuntimeError("Timed out starting the HTTP test server.")
                     time.sleep(0.05)
             yield port
+            if error_log_marker is not None:
+                log.seek(0)
+                if error_log_marker.encode() not in log.read():
+                    raise RuntimeError('The application error was not reported to the server log.')
         except Exception:
             log.seek(0)
             print(log.read().decode(errors="replace"))
@@ -160,7 +164,7 @@ def check_transport(port):
 
 
 def php_command(router):
-    return ["php", "-d", "display_errors=0", "-d", "zlib.output_compression=0", "-d", "opcache.enable=0",
+    return ["php", "-d", "display_errors=0", "-d", "log_errors=1", "-d", "zlib.output_compression=0", "-d", "opcache.enable=0",
             "-S", "127.0.0.1:{port}", "-t", str(router.parent), str(router)]
 
 
