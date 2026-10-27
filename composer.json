@@ -39,6 +39,7 @@
             "@test:build",
             "@test:application",
             "@test:http",
+            "@test:native-lifecycle",
             "@test:compatibility"
         ],
         "test": [
@@ -46,6 +47,7 @@
             "@test:build",
             "@test:application",
             "@test:http",
+            "@test:native-lifecycle",
             "@test:compatibility"
         ],
         "test:php": [
@@ -72,7 +74,8 @@
             "@generate",
             "python3 tools/builds/elephc_web.py"
         ],
-        "test:application": "python3 tools/checks/application_smoke.py"
+        "test:application": "python3 tools/checks/application_smoke.py",
+        "test:native-lifecycle": "python3 tools/checks/native_lifecycle.py"
     },
     "config": {
         "sort-packages": true

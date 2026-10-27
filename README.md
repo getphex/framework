@@ -556,11 +556,27 @@ the native path. HTTP integration checks also compile and run a copied native
 distribution where development sources, build sources, build configuration, and
 `vendor` are absent. An accidental dependency across that boundary fails the check.
 
-The initial native target uses ElephC's default `worker` isolation. It executes
-the entry point with fresh PHP state for each request, so this example creates
-and closes its application container per invocation, as the PHP front controller
-does. Persistent PHP workers remain a separate host adapter. Other ElephC
-isolation modes and server options are described in the
+The initial native target uses ElephC's default `worker` isolation. Every native
+isolation mode reruns the entry point and resets PHP globals, function statics,
+static properties and the PHP heap for each request:
+
+| Isolation | Process executing PHP | PHP application state |
+| --- | --- | --- |
+| `worker` | Reused web worker | Reset for each request |
+| `pool` | Reused handler child | Reset for each request |
+| `request` | New handler child for each request | Reset for each request |
+
+`opcache.preload` runs once in the master before workers are forked. Its output
+goes to the server log, and PHP globals assigned there do not survive request
+initialization. It cannot retain an application container. Native bridge caches
+outside the PHP heap can have a longer lifetime.
+
+ElephC 0.27.6 therefore requires this example to create and close its application
+container per invocation, as the PHP front controller does. Retaining a PHP
+container across native requests requires compiler/runtime support for managed
+application objects and worker lifecycle hooks. A Phex request loop alone cannot
+provide that lifetime. Persistent PHP workers remain a separate host adapter.
+Isolation modes and server options are described in the
 [ElephC web documentation](https://github.com/illegalstudio/elephc/blob/v0.27.6/docs/beyond-php/web.md).
 
 ## Static analysis
@@ -610,6 +626,16 @@ and no generated artifacts. They edit routes and introduce a new service provide
 while the PHP server is running, then verify that the next requests use the new
 definitions without building or restarting. The native isolation check uses a
 separate distribution that omits development and build code entirely.
+
+`composer test:native-lifecycle` characterizes the pinned native runtime with
+consecutive HTTP requests in `worker`, `pool` and `request` isolation. It checks
+process reuse separately from globals, function statics, cached application
+objects and fresh request metadata. A preload probe checks master startup and
+worker recycling. The fixture uses text output because direct `json_encode`
+output separately reproduces a handler crash in ElephC 0.27.6 `pool` mode.
+These checks characterize lifecycle behavior; the application target remains
+default `worker`. Both `composer check` and `composer test` include this
+characterization.
 
 `composer test:application` creates a project outside this checkout, installs a
 mirrored package without Packagist access, removes its original package source,
