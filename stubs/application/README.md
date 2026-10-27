@@ -61,6 +61,28 @@ sources remain ordinary PHP. Keep PHP development code under `bootstrap/` or
 Use one autoloadable type per source file. Additional shared source namespaces
 can be configured in `config/build.php` through `ApplicationConfig::sources`.
 
+Application settings live in the immutable `app/Config/ApplicationSettings.php`.
+`SettingsFactory` reads them at application-container startup through the typed
+environment service. The defaults are `PHEX_GREETING=world`, `PHEX_PAGE_SIZE=20`
+and `PHEX_UPPERCASE_GREETING=false`.
+
+```sh
+PHEX_GREETING=phex PHEX_PAGE_SIZE=10 PHEX_UPPERCASE_GREETING=true composer serve
+```
+
+This returns `{"hello":"PHEX"}` from `/` and uses ten as the default page size
+for `/search`. Supply the same variables when starting the generated PHP host
+or native executable. Restart the host to change its process environment;
+the native binary does not need rebuilding. Required variables and invalid
+values raise `InvalidConfiguration` at container construction. The host reports
+unexpected failures with its generic `500` response.
+
+The factory is registered explicitly at application lifetime in
+`config/services.php`; build tools inspect its signature and do not read its
+environment values. Keep credentials in runtime variables. Source defaults are
+compiled into the executable. PHP-FPM pools must explicitly provide the process
+variables needed by the application.
+
 PHP source edits are visible on subsequent development requests, subject to
 OPcache timestamp settings. Rebuild compiled PHP artifacts after structural
 changes, and recompile the native executable after any source change.

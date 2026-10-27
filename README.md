@@ -467,6 +467,82 @@ Factories must keep request state local. The current lifecycle closes before
 returning an eager string response; streaming will require a separate completion
 contract.
 
+## Configure application services from the environment
+
+`Phex\Config\Environment` provides typed access through an explicit
+`EnvironmentReader` dependency:
+
+```php
+$greeting = $environment->nonEmptyString('PHEX_GREETING', 'world');
+$pageSize = $environment->integer('PHEX_PAGE_SIZE', 20, min: 1, max: 100);
+$uppercase = $environment->boolean('PHEX_UPPERCASE_GREETING', false);
+```
+
+`string` preserves bytes and whitespace, including a present empty string or
+`"0"`. `nonEmptyString` additionally rejects the empty string. Missing variables
+use an explicit default or raise `InvalidConfiguration`. Defaults are validated
+by the same nonempty/range rules; present invalid values never use defaults.
+Integers use checked signed decimal conversion. Booleans accept exactly `true`,
+`false`, `1` and `0`. Variable names use letters/underscores first, followed by
+letters, digits or underscores. Invalid names and inverted numeric bounds are
+programming errors. `map<T>` supports explicit custom conversion through a typed
+closure and preserves its result type; custom converter failures propagate.
+
+`Runtime\Environment\ProcessEnvironment` reads `getenv($name, true)`, preserving
+the distinction between missing and empty values and selecting process-local
+values independently of SAPI request metadata. See the
+[PHP getenv contract](https://www.php.net/manual/en/function.getenv.php).
+`Config\ArrayEnvironment` provides immutable explicit values for tests and
+programmatic composition.
+
+Register these services explicitly and construct an immutable settings DTO in an
+application-scoped static factory. The skeleton uses:
+
+```php
+Service::constructor(EnvironmentReader::class, Lifetime::Application, ProcessEnvironment::class),
+Service::constructor(Environment::class, Lifetime::Application),
+Service::factory(ApplicationSettings::class, Lifetime::Application, SettingsFactory::class, 'create'),
+```
+
+`SettingsFactory` reads and validates the three options above. `HomeAction`
+receives `ApplicationSettings` and uses its greeting/case options; `SearchDecoder`
+uses its default page size. Consumers receive the DTO instead of reading the
+environment themselves. Settings are constructed eagerly and reused throughout
+the application container's lifetime, with no additional environment reads for
+later requests handled by that container. The helper itself is a reader, not a
+global configuration cache.
+
+The build inspects factory signatures and emits direct calls. It does not execute
+configuration factories or capture the build process environment. Native reads
+happen at runtime, so the same executable supports different deployments:
+
+```sh
+PHEX_GREETING=phex PHEX_PAGE_SIZE=10 PHEX_UPPERCASE_GREETING=true \
+  ./var/build/server --listen 127.0.0.1:8080 --workers 1
+```
+
+The skeleton home response becomes `{"hello":"PHEX"}`, and `/search` defaults
+to ten results per page. Restart the host with new environment values to change
+configuration; rebuilding is unnecessary. Literal defaults and application
+source are still part of the artifact, so supply credentials through the runtime
+environment rather than source defaults.
+
+Validation runs when the application container is constructed. Current PHP-FPM
+and native web entries construct it per HTTP invocation; a persistent host can
+reuse the same validated DTO. Invalid settings are application failures: the
+web host returns its generic `500` and logs the failure. Built-in conversion
+messages identify the variable and expected shape without interpolating its raw
+value. For PHP-FPM, explicitly supply required process variables through the
+pool's `env[...]` settings, accounting for its default environment clearing.
+See the [FPM configuration reference](https://www.php.net/manual/en/install.fpm.configuration.php).
+
+Installed-project checks compile with a synthetic build-only value and invalid
+runtime options, verify unchanged artifacts across build environments, check
+that the build-only marker is absent from generated PHP and the executable, and
+run the identical binary with different runtime values. Invalid configurations,
+empty/zero handling and generic error responses are checked on development PHP,
+generated PHP and native, including the stripped native distribution.
+
 ## Compile a dependency container
 
 Service definitions use generic PHPDoc types and explicit constructor or public
