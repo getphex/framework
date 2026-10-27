@@ -100,6 +100,43 @@ def check_application(port):
         check((status, body) == (expected_status, expected_body), f"Unexpected response for {method} {path}.")
         if status == 405:
             check(fields(headers, "Allow") == ["GET"], "Missing Allow header.")
+    check_create_user(port)
+
+
+def check_create_user(port):
+    for media in ("application/json", "Application/JSON; charset=utf-8", "application/vnd.phex.user+json"):
+        status, headers, body = request(port, "POST", "/users", b'{"name":"  Ada  "}',
+                                        {"Content-Type": media, "X-Request-Id": "creator"})
+        check((status, body) == (201, b'{"id":1,"name":"Ada"}'), "Typed JSON creation failed.")
+        check(fields(headers, "Content-Type") == ["application/json"], "JSON content type was overwritten.")
+        check(fields(headers, "Location") == ["/users/1"], "Created resource location was lost.")
+        check(fields(headers, "Content-Length") == [str(len(body))], "JSON byte length is incorrect.")
+        check(fields(headers, "X-Request-Id") == ["creator"], "Creation endpoint used the wrong request session.")
+        check(fields(headers, "X-Middleware-Id") == ["creator"], "Creation middleware used the wrong session.")
+    for payload, media, expected_status, code in (
+        (b'{', "application/json", 400, "malformed_json"),
+        (b'{"name":"\xff"}', "application/json", 400, "malformed_json"),
+        (b'{}', "application/json", 422, "invalid_input"),
+        (b'[]', "application/json", 422, "invalid_input"),
+        (b'{"name":42}', "application/json", 422, "invalid_input"),
+        (b'{"name":92233720368547758080}', "application/json", 422, "invalid_input"),
+        (b'{"name":"Ada","role":"admin"}', "application/json", 422, "invalid_input"),
+        (b'{"name":"Ada"}', "text/plain", 415, "unsupported_media_type"),
+        (b'{"name":"Ada"}', None, 415, "unsupported_media_type"),
+    ):
+        status, headers, body = request(port, "POST", "/users", payload,
+                                        {} if media is None else {"Content-Type": media})
+        decoded = json.loads(body)
+        check((status, decoded["error"]) == (expected_status, code), "JSON input failure changed across runtimes.")
+        check(fields(headers, "Content-Type") == ["application/json"], "JSON error has the wrong content type.")
+        check(fields(headers, "X-Middleware-Id") == ["anonymous"], "JSON error retained an earlier request session.")
+        if status == 422:
+            check(bool(decoded["errors"]), "Validation response has no field errors.")
+    status, headers, body = request(port, "POST", "/users", b'{"name":"Caf\\u00e9"}',
+                                    {"Content-Type": "application/json"})
+    check((status, json.loads(body)) == (201, {"id": 1, "name": "Caf\u00e9"}), "Unicode creation failed after rejected inputs.")
+    status, headers, body = request(port, "GET", "/users")
+    check(status == 405 and fields(headers, "Allow") == ["POST"], "POST route method metadata is incorrect.")
 
 
 def check_transport(port):

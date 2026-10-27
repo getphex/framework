@@ -154,6 +154,25 @@ final class DevelopmentContainerTest extends TestCase
         }
     }
 
+    public function testJsonCreationAndFailuresMatchGeneratedPhp(): void
+    {
+        $development = $this->container();
+        $compiled = new ApplicationContainer();
+        try {
+            $a = new Application($development);
+            $b = new Application($compiled);
+            foreach (['{', '{}', '[]', '{"name":42}', '{"name":"Ada"}', '{"name":"Bob"}'] as $body) {
+                $request = new Request('POST', '/users', new Headers(['Content-Type' => ['application/json'], 'X-Request-Id' => [$body]]), $body);
+                $this->assertEquals($b->handle($request), $a->handle($request));
+            }
+            $this->assertSame('Ada', $a->handle(new Request('GET', '/users/1'))->body);
+            $this->assertSame('Bob', $b->handle(new Request('GET', '/users/2'))->body);
+        } finally {
+            $development->close();
+            $compiled->close();
+        }
+    }
+
     public function testEndpointReferencesUseTheExistingRequestContext(): void
     {
         $container = $this->container();
