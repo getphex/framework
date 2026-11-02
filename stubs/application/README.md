@@ -40,6 +40,31 @@ Route names are unique across HTTP methods. Path parameters are explicit string
 or integer values and are encoded as complete segments. PHP development picks
 up route edits on the next request; compiled targets use the generated registry.
 
+Every application response carries a server-generated `X-Request-Id`, including error
+responses. Client-supplied IDs are replaced. The same ID appears in structured
+JSON logs written through the host's `error_log` destination. The outer
+`RequestLoggingMiddleware` logs completed responses; unhandled exceptions are
+reported once by the host, with the correlation ID and a generic 500 response.
+
+Inject `Phex\Contracts\Logging\Logger` into request services and endpoints:
+
+```php
+use Phex\Logging\Level;
+use Phex\Logging\Record;
+
+$logger->log(new Record(Level::Info, 'greeting.sent', ['recipient_id' => 7]));
+```
+
+Context fields are named scalar values or null. The logger adds UTC time and
+level; the request wrapper adds ID and method. These reserved fields cannot be
+overwritten. Query strings, headers, bodies and traces are not logged
+automatically. Messages and explicit fields are the application's responsibility.
+Application services use `JsonLogger` for events without request context; the
+container rejects application services that capture the request `Logger`.
+The logging API and JSON format are shared by development PHP, compiled PHP and
+ElephC. Direct kernel calls using this service configuration must supply a
+validated `X-Request-Id`, which the normal web entry points generate themselves.
+
 Build the generated PHP container, matcher and static bootstraps:
 
 ```sh
@@ -47,12 +72,66 @@ composer build
 php -S 127.0.0.1:8080 -t public public/compiled.php
 ```
 
-Compile the native server with ElephC 0.27.6:
+Compile and start the native server:
 
 ```sh
 composer build:native
-./var/build/server --listen 127.0.0.1:8080 --workers 1
+./var/build/start
 ```
+
+`config/server.php` selects the native lifecycle and startup defaults:
+
+```php
+return new NativeServerConfig(
+    lifecycle: NativeLifecycle::Request,
+    listen: '127.0.0.1:8080',
+    workers: 4,
+    maxRequests: 1000,
+);
+```
+
+`Request` is the default and works with ElephC 0.27.6. Change it to `Application`
+to initialize one application container per worker after fork. That mode requires
+a compiler with `--web-lifecycle` support, such as `nightly-20261029`:
+
+```sh
+PHEX_ELEPHC="$(elvm which nightly-20261029)" composer build:native
+./var/build/start
+```
+
+`PHEX_ELEPHC` accepts a compiler executable path. Persistent application state is
+private to each worker; every request still has a new request scope, logger
+context and ID. Request failures release request resources and allow subsequent
+requests to use the same application. Application mutations made before a
+failure remain visible. Application resources close during graceful shutdown or
+worker recycling. Keep request-specific dependencies at request lifetime.
+Invalid application settings fail persistent bootstrap before the worker accepts
+traffic. That startup failure has no HTTP request or request ID.
+
+Workers, listen address and recycling are startup settings. Override them without
+compiling:
+
+```sh
+PHEX_WORKERS=8 PHEX_LISTEN=0.0.0.0:8080 ./var/build/start
+./var/build/start --workers 2 --max-requests 0 -- --access-log
+```
+
+Launcher options override `PHEX_LISTEN`, `PHEX_WORKERS` and `PHEX_MAX_REQUESTS`,
+which override the file defaults. Pass extra native options after `--`.
+`maxRequests: 0` disables recycling. To change defaults in the file, run
+`composer build` and restart; this regenerates the launcher without recompiling
+the executable. Changing lifecycle requires `composer build:native`, and the
+launcher refuses a lifecycle that does not match `server.lifecycle` from the last
+successful compilation.
+
+Deploy `var/build/server`, `var/build/server.lifecycle` and `var/build/start`
+together. The launcher uses a POSIX shell and `dirname`; PHP and Composer are not
+needed to start the native application. `composer serve:native` is an optional
+local convenience command.
+
+For application static analysis, scan the compiler API declarations in
+`vendor/getphex/phex/src/Runtime/Elephc/analysis.stub`. They are not runtime
+polyfills and must not be required by application entry points.
 
 The native runtime uses the generated declarations and native adapter. PHP
 development uses Composer and the interpreted container. Shared application

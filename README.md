@@ -181,6 +181,8 @@ case-insensitive and exported in lowercase. Repeated values preserve their order
 and remain separate, including `Set-Cookie`. An empty string is a valid value;
 remove a field with `without()` instead of supplying an empty list. Values preserve
 whitespace and reject control bytes except horizontal tab.
+Removing an absent field returns the same immutable `Headers` instance; removing
+an existing field returns a new set and preserves the original.
 
 Request methods preserve their case. Request URIs preserve their encoded form and
 reject empty values, whitespace, controls, and fragments. This is basic validation,
@@ -543,6 +545,272 @@ run the identical binary with different runtime values. Invalid configurations,
 empty/zero handling and generic error responses are checked on development PHP,
 generated PHP and native, including the stripped native distribution.
 
+## Configure the native server
+
+Generated projects have a typed `config/server.php`:
+
+```php
+use Phex\Build\Config\NativeLifecycle;
+use Phex\Build\Config\NativeServerConfig;
+
+return new NativeServerConfig(
+    lifecycle: NativeLifecycle::Request,
+    listen: '127.0.0.1:8080',
+    workers: 4,
+    maxRequests: 1000,
+);
+```
+
+`config/build.php` loads this object into `ApplicationConfig::server`. Server
+configuration is evaluated by build tooling and excluded from the compiled
+application graph. Application settings and credentials continue to use the
+runtime environment reader described above.
+
+`NativeLifecycle::Request` is the default: each HTTP request constructs and closes
+its application container. `NativeLifecycle::Application` opts into one container
+per worker, initialized after fork and closed during graceful shutdown or worker
+recycling. Every dispatch still creates and closes a fresh `RequestScope`.
+Application services can retain state between requests; different workers have
+independent containers. Request failures run request cleanup and return a generic
+500 with a fresh correlation ID. Earlier changes to application state survive the
+failure. Request-specific services belong at request lifetime.
+Invalid application settings fail persistent bootstrap before the worker accepts
+traffic; this startup failure has no HTTP request ID. In request lifecycle the
+same container-construction failure is handled within the request boundary.
+
+Application lifecycle requires an ElephC compiler with `--web-lifecycle` support.
+It was introduced in PR 2127 and is available in `nightly-20261029`; release
+0.27.6 supports the default request path. Phex checks the compiler capability and
+reports an unsupported persistent build explicitly. Select a compiler executable
+without changing the project pin, for example with an installed elvm version:
+
+```sh
+PHEX_ELEPHC="$(elvm which nightly-20261029)" composer build:native
+./var/build/start
+```
+
+The build selects `native/main.php` for request lifecycle or
+`native/application.php` for application lifecycle and supplies the corresponding
+compiler flags. Both use the shared kernel, routing, logging and DI definitions.
+The persistent entry registers `Phex\Runtime\Elephc\NativeApplication` with
+`Elephc\Web\Worker`. Its reader maps the owned runtime request into the existing
+HTTP request API. Static analysis declarations for that compiler-provided API
+live in `src/Runtime/Elephc/analysis.stub` and are never loaded by runtime entries.
+
+The generated POSIX launcher `var/build/start` applies startup settings to the
+native executable. Precedence is explicit launcher options, then environment,
+then configured defaults:
+
+```sh
+PHEX_LISTEN=0.0.0.0:8080 PHEX_WORKERS=8 PHEX_MAX_REQUESTS=0 ./var/build/start
+./var/build/start --workers 2 --max-requests 500 -- --access-log
+```
+
+Pass additional native options after `--`. `maxRequests: 0` disables recycling;
+worker counts must be positive. Empty or invalid numeric environment overrides
+fail startup. Bind-address validation is completed by the native server. The
+launcher preserves argument boundaries, including paths containing spaces.
+
+Changing lifecycle requires `composer build:native`. To update only configured
+listen/worker/recycling defaults, run `composer build` and restart the launcher;
+the native executable is reused. Environment or launcher-option overrides need
+only a restart. A successful compilation writes `var/build/server.lifecycle`;
+the launcher checks it against its expected mode and refuses a lifecycle change
+that has only regenerated artifacts. Failed compilation removes the executable,
+assembly intermediate and success marker.
+
+Deploy `server`, `server.lifecycle` and `start` together. Startup requires a POSIX
+shell and `dirname`, with no PHP, Composer, development runtime or source
+configuration. The executable can also be launched directly with native flags.
+
+## Compare HTTP runtime performance
+
+The local benchmark requires Linux, four available physical CPU cores, PHP-FPM,
+`hey`, `taskset`, Composer, authenticated `gh` and an ElephC compiler supporting
+both web lifecycles. It installs an independent application, downloads a
+checksum-verified Caddy release, and compares one worker per backend:
+
+```sh
+python3 tools/benchmarks/native_lifecycle.py --compiler /path/to/elephc
+```
+
+PHP-FPM uses OPcache and preload with JIT disabled. All backends serve the same
+JSON through Caddy, with logging enabled and output discarded. Rotated runs,
+latency, CPU usage, errors and provenance are saved under `var/benchmarks`.
+
+Build tools inherit the host environment. Runtime processes use a separate
+controlled environment by default, preserving `PHPRC` and `PHP_INI_SCAN_DIR`
+(including an empty scan directory). Forward application variables explicitly to
+both native workers and the FPM pool:
+
+```sh
+PHEX_PAGE_SIZE=30 python3 tools/benchmarks/native_lifecycle.py --pass-env PHEX_PAGE_SIZE
+```
+
+Unset requested variables fail early. Values are passed literally, including
+empty strings and `0`; reports contain names, counts and byte sizes rather than
+environment values. The benchmark expects the default `{"hello":"world"}`
+response, so forwarding a greeting override intentionally fails its workload
+check. Use `--runtime-environment inherited` to reproduce the original host
+environment protocol. This option retains host variables but still removes demo
+overrides unless requested with `--pass-env`.
+
+`tools/benchmarks/request_profile.py` uses the same environment options for
+profiling. To separate compiler changes from the absent-header optimization,
+save the original `Headers.php` and run:
+
+```sh
+python3 tools/benchmarks/compare_request_versions.py \
+  --before-compiler /path/to/old/elephc \
+  --after-compiler /path/to/new/elephc \
+  --before-headers /path/to/original/Headers.php
+```
+
+This comparison keeps other sources fixed, restarts PHP-FPM after switching
+header versions, and includes inherited-environment controls and the native
+application lifecycle. Raw runs, compiler and binary hashes, header snapshots,
+CPU time and a report are retained; temporary applications and servers are
+removed on exit.
+
+If the broad comparison has overlapping ranges, confirm individual changes with
+adjacent A/B controls using the retained binaries:
+
+```sh
+python3 tools/benchmarks/paired_request_versions.py \
+  --comparison var/benchmarks/request-comparison-TIMESTAMP/comparison.json
+```
+
+This warms each backend and alternates A, B, B, A within short blocks, keeping
+workers alive and running one load process at a time. Its report retains every
+block, including slow runs, and compares compiler, header, environment and
+PHP-FPM effects separately.
+
+To compare all supported native lifecycle/isolation combinations with PHP-FPM,
+including one and eight parallel PHP handlers and both environment policies:
+
+```sh
+python3 tools/benchmarks/web_mode_comparison.py \
+  --compiler /path/to/elephc --source-ref COMMIT
+```
+
+This covers worker/Request, worker/Application, pool/Request and
+fork-per-request/Request. Application with pool or per-request isolation is
+rejected by ElephC. At eight handlers, pool and per-request isolation also test
+one web worker with eight handlers versus eight web workers with one handler
+each. Both topologies have the same maximum PHP parallelism. PHP-FPM uses that
+same number of static workers, OPcache/preload and no JIT.
+
+The matrix uses adjacent PHP-FPM controls, 32 clients and all available CPUs.
+Caddy permits four Go execution threads, avoiding a fixed one-core frontend
+limit. CPU accounting includes reaped children for fork-per-request execution.
+A bounded native preflight checks for crashes after a successful response;
+unhealthy variants are marked invalid instead of assigned a throughput number.
+Benchmark descendants have core dumps disabled. Exact inputs, every attempt,
+process identities, logs, latency and CPU are retained under `var/benchmarks`.
+Use `--resume OUTPUT_DIRECTORY` with the original options to continue an
+interrupted matrix without discarding completed controls or failed attempts.
+
+The matrix above measures both backends behind Caddy. ElephC also serves HTTP
+directly, so that topology includes an optional extra HTTP hop for the native
+backend. Compare the minimal HTTP deployment paths separately using retained
+binaries from a completed matrix:
+
+```sh
+python3 -B tools/benchmarks/native_frontend_comparison.py \
+  --matrix var/benchmarks/web-modes-TIMESTAMP/results.json \
+  --output var/benchmarks/frontend-comparison-new \
+  --runtime-environments inherited --workers 1 8
+```
+
+This alternates direct native HTTP, native HTTP through Caddy, and PHP-FPM through
+Caddy/FastCGI. Both native paths use the same backend listener and worker processes.
+Rotating symmetric blocks quantify the extra proxy hop while keeping one active
+load generator. Source and binary hashes, PHP OPcache/preload settings, process
+identity, exits and HTTP responses are checked. All rates are totals for the
+instance. Use `--resume` with the same output directory and options to retry an
+interrupted study while retaining earlier attempts.
+
+To isolate compiler changes using two completed matrices with identical sources
+and protocols, run:
+
+```sh
+python3 -B tools/benchmarks/paired_web_versions.py \
+  --baseline var/benchmarks/web-modes-OLD/results.json \
+  --candidate var/benchmarks/web-modes-NEW/results.json
+```
+
+Both retained binaries stay warm and run in adjacent ABBA blocks. Percentages
+are medians of within-block geometric-mean ratios, rather than ratios of rates
+collected in unrelated sessions. Keep direct and proxied deployment results
+separate when interpreting these comparisons.
+
+## Write structured application logs
+
+Inject `Phex\Contracts\Logging\Logger` into a request service or endpoint and send
+an immutable record:
+
+```php
+use Phex\Logging\Level;
+use Phex\Logging\Record;
+
+$logger->log(new Record(Level::Info, 'order.accepted', ['order_id' => 42]));
+```
+
+`Record` accepts named string fields containing strings, integers, booleans,
+floats or null. It rejects objects, arrays and numeric field names at runtime as
+well as through static analysis. Messages are literal strings. Object inspection
+and placeholder interpolation are not part of the logging path.
+
+The application skeleton binds `JsonLogger` and `LogOutput` at application
+lifetime, and `Logger`, `RequestLogContext` and `RequestLoggingMiddleware` at
+request lifetime. `RequestLogger` adds the current request ID and method to every
+record. Application services can inject `JsonLogger` directly for events outside
+a request. The dependency analyzer rejects an application service that captures
+the request logger.
+
+Each emitted record is a flat JSON object, for example:
+
+```json
+{"order_id":42,"request_id":"5e48ce831457b30130e15d3c7a298531","method":"POST","timestamp":"2026-10-27T12:00:00Z","level":"info","message":"order.accepted"}
+```
+
+The eight `Level` cases run from `Debug` to `Emergency`. `JsonLogger` accepts an
+optional minimum level, such as `new JsonLogger($output, Level::Warning)`;
+`JsonLogger::create` uses `Debug` for ordinary static DI factories. Timestamps use
+UTC. The logger owns `timestamp`, `level` and `message`; the request wrapper owns
+`request_id` and `method`. Caller fields cannot overwrite these values. Newlines
+are JSON-escaped and invalid UTF-8 is replaced. Non-finite floats fail JSON
+encoding unless their level is filtered out; output and encoding failures
+propagate to the caller.
+
+The skeleton enables `RandomRequestIdGenerator` through the optional
+`WebApplication::serve(..., requestIds: ...)` argument. The host generates an ID
+before constructing the request-lifecycle application container, replaces any inbound
+`X-Request-Id`, and returns the generated value on responses, including transport,
+bootstrap and application errors. IDs are correlation values. Custom generators
+return a validated `RequestId`: 1 to 128 ASCII letters, digits, underscores or
+hyphens. `RequestLogContext::create` requires exactly one such header, so direct
+kernel callers using these logging bindings must supply it themselves.
+
+`RequestLoggingMiddleware` records `http.request.completed` with the response
+status, including handled input errors and routing failures. Completion describes
+the handler response before cleanup and output; a later cleanup failure adds a
+correlated error record. Unexpected exceptions propagate through request cleanup
+to the host. `LoggerErrorReporter` writes their
+message and `exception_type` once, with the response ID. Both default target
+reporters use this same JSON format; custom `ErrorReporter` implementations now
+accept an optional scalar context array in `report(Throwable, array $context = [])`.
+Failures before reading the request have an ID but no observed method. If ID
+generation itself fails, the host reports the error without an ID.
+
+`SapiLogOutput` sends each complete record through `error_log`, leaving log
+destinations to PHP-FPM or the native host. A custom `LogOutput` can target another
+destination. The framework does not automatically log URIs, query parameters,
+request bodies, cookies, authorization headers or stack traces. Messages and
+explicit fields are written as supplied by the application. The native logging
+bootstrap contains declarations only; the SAPI output is loaded by web adapters,
+keeping web-only functions out of native CLI tests.
+
 ## Compile a dependency container
 
 Service definitions use generic PHPDoc types and explicit constructor or public
@@ -835,6 +1103,16 @@ output separately reproduces a handler crash in ElephC 0.27.6 `pool` mode.
 These checks characterize lifecycle behavior; the application target remains
 default `worker`. Both `composer check` and `composer test` include this
 characterization.
+
+`composer test:persistent` requires a compiler with application lifecycle support.
+It builds an independently installed project through the CLI and tests the
+generated launcher, retained state, fresh request metadata, failure recovery,
+request cleanup, shutdown, worker recycling and worker-count overrides. It then
+relocates the project, removes Composer/build/development/configuration sources,
+recompiles the native graph and starts with PHP absent from `PATH`. Set
+`PHEX_ELEPHC` to select the compiler for this command. CI runs the full check on
+release 0.27.6 and the pinned `nightly-20261029`, with the persistent test required
+on the nightly for both PHP 8.3 and 8.5.
 
 `composer test:application` creates a project outside this checkout, installs a
 mirrored package without Packagist access, removes its original package source,
