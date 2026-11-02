@@ -5,6 +5,7 @@ includes:
 parameters:
     level: max
     phpVersion: 80300
+    fileExtensions: [php, stub]
     paths:
         - src
         - tests
@@ -12,6 +13,8 @@ parameters:
         - bin/phex
         - stubs/application
         - var/generated
+    scanFiles:
+        - src/Runtime/Elephc/analysis.stub
     tmpDir: var/cache/phpstan
     parallel:
         maximumNumberOfProcesses: 1

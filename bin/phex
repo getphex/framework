@@ -39,7 +39,8 @@ try {
     $config = require $argv[2];
     if ($config instanceof ApplicationConfig) {
         if ($argv[1] === 'compile') {
-            fwrite(STDOUT, 'Native HTTP executable: '.(new NativeCompiler())->compile($config)."\n");
+            $compiler = getenv('PHEX_ELEPHC', true);
+            fwrite(STDOUT, 'Native HTTP executable: '.(new NativeCompiler($compiler === false ? 'elephc' : $compiler))->compile($config)."\n");
         } else {
             foreach ((new ApplicationBuilder())->build($config) as $path => $changed) {
                 fwrite(STDOUT, ($changed ? 'Generated ' : 'Already current: ').$path."\n");

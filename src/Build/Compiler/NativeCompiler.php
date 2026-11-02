@@ -4,23 +4,49 @@ declare(strict_types=1);
 
 namespace Phex\Build\Compiler;
 
+use InvalidArgumentException;
+use Phex\Build\Config\NativeLifecycle;
 use RuntimeException;
 
 final class NativeCompiler
 {
+    public function __construct(private readonly string $compiler = 'elephc')
+    {
+        if ($compiler === '') {
+            throw new InvalidArgumentException('The native compiler path cannot be empty.');
+        }
+    }
+
     public function compile(ApplicationConfig $config): string
     {
         $root = realpath($config->root);
-        if ($root === false || !is_file($root.'/native/main.php')) {
-            throw new RuntimeException('The application needs native/main.php.');
+        if ($root === false) {
+            throw new RuntimeException('The application root does not exist.');
         }
-        (new ApplicationBuilder())->build($config);
         $entry = $root.'/var/build/server.php';
         $binary = $root.'/var/build/server';
-        ArtifactWriter::write($entry, "<?php\n\ndeclare(strict_types=1);\n\nrequire __DIR__.'/../../native/main.php';\n");
+        $manifest = $root.'/var/build/server.lifecycle';
         $success = false;
         try {
-            $process = proc_open(['elephc', '--web', '--strict-php', $entry], [0 => STDIN, 1 => STDOUT, 2 => STDERR], $pipes, $root);
+            $flags = ['--web', '--strict-php'];
+            $source = 'main.php';
+            if ($config->server->lifecycle === NativeLifecycle::Application) {
+                $this->requireApplicationLifecycle($root);
+                $flags[] = '--web-isolation=worker';
+                $flags[] = '--web-lifecycle=application';
+                $source = 'application.php';
+            }
+            if (!is_file($root.'/native/'.$source)) {
+                throw new RuntimeException('The application needs native/'.$source.'.');
+            }
+            (new ApplicationBuilder())->build($config);
+            ArtifactWriter::write($entry, "<?php\n\ndeclare(strict_types=1);\n\nrequire __DIR__.'/../../native/".$source."';\n");
+            foreach ([$binary, $manifest] as $stale) {
+                if (is_file($stale) && !unlink($stale)) {
+                    throw new RuntimeException('Cannot remove a preceding native build artifact: '.$stale);
+                }
+            }
+            $process = proc_open([$this->compiler, ...$flags, $entry], [0 => STDIN, 1 => STDOUT, 2 => STDERR], $pipes, $root);
             if (!is_resource($process)) {
                 throw new RuntimeException('Cannot start ElephC.');
             }
@@ -28,6 +54,10 @@ final class NativeCompiler
             if ($status !== 0) {
                 throw new RuntimeException('Native compilation failed with exit status '.$status.'.');
             }
+            if (!is_file($binary) || !is_executable($binary)) {
+                throw new RuntimeException('The native compiler did not produce the server executable.');
+            }
+            ArtifactWriter::write($manifest, $config->server->lifecycle->value."\n");
             $success = true;
         } finally {
             if (is_file($root.'/var/build/server.s')) {
@@ -36,8 +66,26 @@ final class NativeCompiler
             if (!$success && is_file($binary)) {
                 unlink($binary);
             }
+            if (!$success && is_file($manifest)) {
+                unlink($manifest);
+            }
         }
 
         return $binary;
+    }
+
+    private function requireApplicationLifecycle(string $root): void
+    {
+        $process = proc_open([$this->compiler, '--help'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => STDERR], $pipes, $root);
+        if (!is_resource($process)) {
+            throw new RuntimeException('Cannot inspect ElephC application lifecycle support.');
+        }
+        fclose($pipes[0]);
+        $help = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        $status = proc_close($process);
+        if ($status !== 0 || $help === false || !str_contains($help, '--web-lifecycle')) {
+            throw new RuntimeException('Application lifecycle requires an ElephC compiler with --web-lifecycle support. Set PHEX_ELEPHC to a supported compiler.');
+        }
     }
 }

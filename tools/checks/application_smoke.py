@@ -277,7 +277,7 @@ def main():
         check(snapshots == {path.name: path.read_bytes() for path in generated.iterdir()}, "Invalid source discovery changed existing artifacts.")
         broken.unlink()
         phpstan = project / "phpstan.neon"
-        phpstan.write_text("parameters:\n    level: max\n    phpVersion: 80300\n    paths:\n        - app\n        - config\n        - routes\n        - bootstrap\n        - public\n        - native\n        - var/generated\n    bootstrapFiles:\n        - vendor/autoload.php\n    tmpDir: var/cache/phpstan\n    parallel:\n        maximumNumberOfProcesses: 1\n")
+        phpstan.write_text("parameters:\n    level: max\n    phpVersion: 80300\n    paths:\n        - app\n        - config\n        - routes\n        - bootstrap\n        - public\n        - native\n        - var/generated\n    scanFiles:\n        - vendor/getphex/phex/src/Runtime/Elephc/analysis.stub\n    bootstrapFiles:\n        - vendor/autoload.php\n    tmpDir: var/cache/phpstan\n    parallel:\n        maximumNumberOfProcesses: 1\n")
         run([str(ROOT / "tools/phpstan/vendor/bin/phpstan"), "analyse", "--configuration", str(phpstan), "--no-progress"], project)
         fake = directory / "compiler"
         fake.mkdir()
@@ -285,10 +285,10 @@ def main():
         fake_binary.write_text("#!/bin/sh\nexit 9\n")
         fake_binary.chmod(0o755)
         build = project / "var/build"
-        build.mkdir()
+        build.mkdir(exist_ok=True)
         (build / "server").write_text("stale executable")
         (build / "server.s").write_text("stale assembly")
-        environment = dict(os.environ, PATH=str(fake) + os.pathsep + os.environ["PATH"])
+        environment = dict(os.environ, PATH=str(fake) + os.pathsep + os.environ["PATH"], PHEX_ELEPHC=str(fake_binary))
         failed = subprocess.run(["php", "vendor/bin/phex", "compile", "config/build.php"], cwd=project, env=environment, capture_output=True)
         check(failed.returncode != 0 and not (build / "server").exists() and not (build / "server.s").exists(), "Failed compilation retained a stale executable or assembly.")
         shutil.rmtree(fake)

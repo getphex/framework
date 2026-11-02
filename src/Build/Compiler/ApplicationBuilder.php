@@ -6,6 +6,7 @@ namespace Phex\Build\Compiler;
 
 use Phex\Build\Analysis\InvalidContainer;
 use Phex\Build\Emitter\Literal;
+use Phex\Build\Emitter\NativeLauncherEmitter;
 
 final class ApplicationBuilder
 {
@@ -24,9 +25,9 @@ final class ApplicationBuilder
         $source = (new ContainerCompiler())->compile($config->container, $config->className);
         $files = (new StaticSources())->collect($root, $config->sources);
         $artifacts = [$artifact => $source];
-        foreach (['php' => 'Fpm', 'native' => 'Elephc'] as $target => $adapter) {
+        foreach (['php' => 'Fpm/bootstrap.php', 'native' => 'Elephc/bootstrap.php', 'native-application' => 'Elephc/application-bootstrap.php'] as $target => $adapter) {
             $bootstrap = "<?php\n\ndeclare(strict_types=1);\n\n// Generated static declarations. Rebuild after structural changes.\n";
-            $runtime = dirname(__DIR__, 2).'/Runtime/'.$adapter.'/bootstrap.php';
+            $runtime = dirname(__DIR__, 2).'/Runtime/'.$adapter;
             foreach ([$runtime, ...$files, $artifact] as $file) {
                 $bootstrap .= 'require_once __DIR__.'.Literal::emit('/'.RelativePath::between($directory, $file)).";\n";
             }
@@ -39,6 +40,8 @@ final class ApplicationBuilder
         foreach ($artifacts as $file => $contents) {
             $changed[$file] = ArtifactWriter::write($file, $contents);
         }
+        $launcher = $root.'/var/build/start';
+        $changed[$launcher] = ArtifactWriter::write($launcher, (new NativeLauncherEmitter())->emit($config->server), 0755);
 
         return $changed;
     }

@@ -27,6 +27,33 @@ final class WebApplication
      */
     public static function serve(RequestReader $reader, ResponseOutput $output, callable $factory, ErrorReporter $errors, string $requestMethod = 'GET', ?RequestIdGenerator $requestIds = null): void
     {
+        \Phex\Runtime\Http\WebApplication::dispatch($reader, $output, fn (): ApplicationContainer => $factory(), $errors, $requestMethod, $requestIds, true);
+    }
+
+    /**
+     * @internal The owning persistent host closes the container at shutdown.
+     * @template TReader of RequestReader
+     * @template TOutput of ResponseOutput
+     * @param TReader $reader
+     * @param TOutput $output
+     */
+    public static function serveRetained(RequestReader $reader, ResponseOutput $output, ApplicationContainer $container, ErrorReporter $errors, string $requestMethod, ?RequestIdGenerator $requestIds): void
+    {
+        \Phex\Runtime\Http\WebApplication::dispatch($reader, $output, fn (): ApplicationContainer => $container, $errors, $requestMethod, $requestIds, false);
+    }
+
+    /**
+     * @template TReader of RequestReader
+     * @template TOutput of ResponseOutput
+     * @template TContainer of ApplicationContainer
+     * @template TReporter of ErrorReporter
+     * @param TReader $reader
+     * @param TOutput $output
+     * @param callable(): TContainer $factory
+     * @param TReporter $errors
+     */
+    private static function dispatch(RequestReader $reader, ResponseOutput $output, callable $factory, ErrorReporter $errors, string $requestMethod, ?RequestIdGenerator $requestIds, bool $closeContainer): void
+    {
         $requestId = '';
         $context = [];
         try {
@@ -45,7 +72,9 @@ final class WebApplication
                 }
                 $response = (new Application($container))->handle($request);
             } finally {
-                $container->close();
+                if ($closeContainer) {
+                    $container->close();
+                }
             }
         } catch (InvalidRequest) {
             $response = new Response(status: 400, body: 'Bad Request');

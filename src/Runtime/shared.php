@@ -63,4 +63,5 @@ require_once __DIR__.'/Http/InvalidRequest.php';
 require_once __DIR__.'/Http/BufferedResponseEmitter.php';
 require_once __DIR__.'/Http/SapiHeaders.php';
 require_once __DIR__.'/Http/WebApplication.php';
+require_once __DIR__.'/Http/PersistentWebApplication.php';
 require_once __DIR__.'/Fpm/ServerRequest.php';

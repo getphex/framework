@@ -78,6 +78,7 @@
             "python3 tools/builds/elephc_web.py"
         ],
         "test:application": "python3 tools/checks/application_smoke.py",
+        "test:persistent": "python3 tools/checks/persistent_application.py",
         "test:native-lifecycle": "python3 tools/checks/native_lifecycle.py"
     },
     "config": {

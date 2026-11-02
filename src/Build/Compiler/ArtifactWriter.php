@@ -9,9 +9,16 @@ use RuntimeException;
 /** @internal Atomic, idempotent writes for complete build artifacts. */
 final class ArtifactWriter
 {
-    public static function write(string $path, string $source): bool
+    public static function write(string $path, string $source, int $permissions = 0666): bool
     {
         if (is_file($path) && file_get_contents($path) === $source) {
+            if (($permissions & 0111) !== 0 && !is_executable($path)) {
+                if (!chmod($path, $permissions & ~umask())) {
+                    throw new RuntimeException('Cannot make the generated artifact executable: '.$path);
+                }
+
+                return true;
+            }
             return false;
         }
         $directory = dirname($path);
@@ -24,7 +31,7 @@ final class ArtifactWriter
         }
         try {
             if (file_put_contents($temporary, $source) !== strlen($source)
-                || !chmod($temporary, 0666 & ~umask()) || !rename($temporary, $path)) {
+                || !chmod($temporary, $permissions & ~umask()) || !rename($temporary, $path)) {
                 throw new RuntimeException('Cannot write the generated artifact: '.$path);
             }
         } finally {

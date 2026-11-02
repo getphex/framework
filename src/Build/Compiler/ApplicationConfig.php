@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Phex\Build\Compiler;
 
 use Phex\Container\Definition\Container;
+use Phex\Build\Config\NativeServerConfig;
 
 final readonly class ApplicationConfig
 {
@@ -14,5 +15,6 @@ final readonly class ApplicationConfig
         public string $root,
         public string $className = 'App\\Generated\\ApplicationContainer',
         public array $sources = ['App\\' => 'app'],
+        public NativeServerConfig $server = new NativeServerConfig(),
     ) {}
 }

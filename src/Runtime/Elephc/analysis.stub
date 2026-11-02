@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Elephc\Web;
+
+// Analysis-only declarations, excluded from Composer's PSR-4 PHP file discovery.
+// This file is not loaded by any PHP or native runtime entry point.
+final class Request
+{
+    public function __construct(public string $method, public string $uri, public string $path, public string $body) {}
+}
+
+interface WorkerApplication
+{
+    public function handle(Request $request): void;
+    public function shutdown(): void;
+}
+
+final class Worker
+{
+    public static function register(WorkerApplication $application): void {}
+}
