@@ -3,3 +3,4 @@
 /var/
 /.phpunit.cache/
 __pycache__/
+/caddy/
