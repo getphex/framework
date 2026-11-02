@@ -66,6 +66,7 @@
             "@php bin/phex build tests/Build/empty-routing.php",
             "@php bin/phex build tests/Build/named-routing.php",
             "@php bin/phex build tests/Build/configuration.php",
+            "@php bin/phex build tests/Build/logging.php",
             "@php bin/phex build stubs/application/config/build.php"
         ],
         "analyse:phpstan": "tools/phpstan/vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress",

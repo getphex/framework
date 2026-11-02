@@ -10,9 +10,12 @@ use Throwable;
 final class Errors implements ErrorReporter
 {
     public string $message = '';
+    /** @var array<string, bool|float|int|string|null> */
+    public array $context = [];
 
-    public function report(Throwable $error): void
+    public function report(Throwable $error, array $context = []): void
     {
         $this->message = $error->getMessage();
+        $this->context = $context;
     }
 }

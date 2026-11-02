@@ -3,6 +3,8 @@
 
 import json
 import os
+from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 import shutil
 import subprocess
@@ -18,6 +20,96 @@ def run(command, project, *, env=None):
     if result.returncode:
         raise RuntimeError(f"Command failed: {command}\n{result.stdout}")
     return result.stdout
+
+
+def install_project(directory):
+    package = directory / "package"
+    package.mkdir()
+    for name in ("src", "bin", "stubs"):
+        shutil.copytree(ROOT / name, package / name, ignore=shutil.ignore_patterns("vendor", "var", "__pycache__"))
+    for name in ("composer.json", "README.md"):
+        shutil.copy2(ROOT / name, package / name)
+    project = directory / "my app's $"
+    run(["php", str(ROOT / "bin/phex"), "new", str(project)], ROOT)
+    manifest = json.loads((project / "composer.json").read_text())
+    check("repositories" not in manifest, "The default template depends on a local checkout.")
+    manifest["repositories"] = [{"type": "path", "url": str(package), "options": {"symlink": False, "versions": {"getphex/phex": "0.1.0"}}}, {"packagist.org": False}]
+    (project / "composer.json").write_text(json.dumps(manifest, indent=4) + "\n")
+    run(["composer", "install", "--no-interaction", "--prefer-dist", "--no-scripts", "--no-plugins"], project)
+    installed = project / "vendor/getphex/phex"
+    check(installed.is_dir() and not installed.is_symlink(), "The framework was not independently mirrored.")
+    shutil.rmtree(package)
+    return project
+
+
+def correlation(headers):
+    values = fields(headers, "X-Request-Id")
+    check(len(values) == 1, "The response needs exactly one request ID.")
+    value = values[0]
+    check(len(value) == 32 and all(byte in "0123456789abcdef" for byte in value), "The host returned an invalid request ID.")
+    return value
+
+
+def verify_logs(contents, expected):
+    records = []
+    for line in contents.splitlines():
+        start = line.find('{')
+        if start < 0:
+            continue
+        try:
+            record = json.loads(line[start:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(record, dict) and "level" in record and "timestamp" in record:
+            records.append(record)
+    check(bool(records), "No structured application records reached the server log.")
+    for record in records:
+        check(record["level"] in ("info", "error"), "The application log has an unexpected level.")
+        check(isinstance(record["message"], str), "The application log lost its message.")
+        check(record["timestamp"].endswith('Z'), "Log timestamps must use UTC.")
+        datetime.fromisoformat(record["timestamp"])
+        check(set(record) <= {"timestamp", "level", "message", "request_id", "method", "status", "exception_type"},
+              "Implicit request data entered the structured log.")
+        check("private-log-canary" not in json.dumps(record), "Request input was logged implicitly.")
+    for request_id, expected_fields in expected:
+        matches = [record for record in records if record.get("request_id") == request_id]
+        check(len(matches) == 1, "Each observed request needs exactly one correlated completion or error record.")
+        check(all(matches[0].get(key) == value for key, value in expected_fields.items()), "Log and response correlation diverged.")
+
+
+def verify_logging(port):
+    expected = []
+    seen = set()
+    for method, path, body, request_headers, status, message in (
+        ("GET", "/missing?secret=private-log-canary", None,
+         {"X-Request-Id": "private-log-canary", "Authorization": "private-log-canary", "Cookie": "private-log-canary"},
+         404, "http.request.completed"),
+        ("POST", "/greet", b'{}', {"Content-Type": "application/json"}, 422, "http.request.completed"),
+        ("GET", "/fail", None, {}, 500, "private failure"),
+        ("HEAD", "/fail", None, {}, 500, "private failure"),
+    ):
+        actual_status, headers, response_body = request(port, method, path, body, request_headers)
+        check(actual_status == status, "Logging changed the application status.")
+        if method == "HEAD":
+            check(response_body == b'', "Correlated HEAD errors must suppress the response body.")
+        request_id = correlation(headers)
+        check(request_id not in seen, "A previous request ID leaked into the next request.")
+        seen.add(request_id)
+        entry = {"level": "error" if status == 500 else "info", "message": message, "method": method}
+        if status == 500:
+            entry["exception_type"] = "RuntimeException"
+        else:
+            entry["status"] = status
+        expected.append((request_id, entry))
+    return expected
+
+
+@contextmanager
+def application_server(command, **options):
+    expected = []
+    with server(command, log_check=lambda contents: verify_logs(contents, expected), **options) as port:
+        yield port
+        expected.extend(verify_logging(port))
 
 
 def verify(port, home="/", greeting="world", search="/search", page_size=20):
@@ -95,7 +187,7 @@ def verify_environment(command):
         ({"PHEX_GREETING": "runtime-native", "PHEX_PAGE_SIZE": "9", "PHEX_UPPERCASE_GREETING": "true"}, "RUNTIME-NATIVE", 9),
         ({"PHEX_GREETING": "0", "PHEX_PAGE_SIZE": "1", "PHEX_UPPERCASE_GREETING": "0"}, "0", 1),
     ):
-        with server(command, env=configuration_environment(**values), error_log_marker="private failure") as port:
+        with application_server(command, env=configuration_environment(**values), error_log_marker="private failure") as port:
             verify(port, "/hello", greeting, "/find", page_size)
     for name, value in (
         ("PHEX_PAGE_SIZE", "do-not-print-config-value"),
@@ -103,11 +195,13 @@ def verify_environment(command):
         ("PHEX_UPPERCASE_GREETING", "yes"),
         ("PHEX_GREETING", ""),
     ):
+        expected = []
         with server(command, env=configuration_environment(**{name: value}), error_log_marker=name,
-                    forbidden_log_marker="do-not-print-config-value") as port:
+                    forbidden_log_marker="do-not-print-config-value", log_check=lambda contents: verify_logs(contents, expected)) as port:
             status, headers, body = request(port, "GET", "/hello")
             check((status, body) == (500, b"Internal Server Error"), "Invalid startup configuration escaped the host error policy.")
             check(fields(headers, "Content-Type") == ["text/plain; charset=utf-8"], "Configuration errors lost their content type.")
+            expected.append((correlation(headers), {"level": "error", "exception_type": "Phex\\Config\\InvalidConfiguration"}))
 
 
 def main():
@@ -116,22 +210,8 @@ def main():
     build_environment = configuration_environment(PHEX_GREETING=build_canary, PHEX_PAGE_SIZE="invalid-during-build", PHEX_UPPERCASE_GREETING="invalid-during-build")
     with tempfile.TemporaryDirectory(prefix="phex-application-") as temporary:
         directory = Path(temporary)
-        package = directory / "package"
-        package.mkdir()
-        for name in ("src", "bin", "stubs"):
-            shutil.copytree(ROOT / name, package / name, ignore=shutil.ignore_patterns("vendor", "var", "__pycache__"))
-        for name in ("composer.json", "README.md"):
-            shutil.copy2(ROOT / name, package / name)
-        project = directory / "my app's $"
-        run(["php", str(ROOT / "bin/phex"), "new", str(project)], ROOT)
-        manifest = json.loads((project / "composer.json").read_text())
-        check("repositories" not in manifest, "The default template depends on a local checkout.")
-        manifest["repositories"] = [{"type": "path", "url": str(package), "options": {"symlink": False, "versions": {"getphex/phex": "0.1.0"}}}, {"packagist.org": False}]
-        (project / "composer.json").write_text(json.dumps(manifest, indent=4) + "\n")
-        run(["composer", "install", "--no-interaction", "--prefer-dist", "--no-scripts", "--no-plugins"], project)
+        project = install_project(directory)
         installed = project / "vendor/getphex/phex"
-        check(installed.is_dir() and not installed.is_symlink(), "The framework was not independently mirrored.")
-        shutil.rmtree(package)
         run(["php", "vendor/bin/phex", "--help"], project)
         local = directory / "local project"
         run(["php", "vendor/bin/phex", "new", str(local), "--local"], project)
@@ -145,9 +225,9 @@ def main():
         services = project / "config/services.php"
         services.write_text(services.read_text().replace("return new Container([", "return new Container([\n    Service::constructor(\\App\\Http\\Action\\FailAction::class, Lifetime::Transient),"))
         routes = project / "routes/web.php"
-        routes.write_text(routes.read_text().replace("return [", "return [\n    new EndpointRoute('GET', '/fail', \\App\\Http\\Action\\FailAction::class),"))
+        routes.write_text(routes.read_text().replace("return [", "return [\n    new EndpointRoute('GET', '/fail', \\App\\Http\\Action\\FailAction::class),\n    new EndpointRoute('HEAD', '/fail', \\App\\Http\\Action\\FailAction::class),"))
 
-        with server(php_command(project / "public/index.php"), error_log_marker="private failure", env=baseline_environment) as port:
+        with application_server(php_command(project / "public/index.php"), error_log_marker="private failure", env=baseline_environment) as port:
             verify(port)
             routes = project / "routes/web.php"
             routes.write_text(routes.read_text().replace("'/'", "'/hello'").replace("'/search'", "'/find'"))
@@ -218,10 +298,10 @@ def main():
         moved = directory / "relocated application"
         project.rename(moved)
         project = moved
-        with server(php_command(project / "public/compiled.php"), error_log_marker="private failure", env=baseline_environment) as port:
+        with application_server(php_command(project / "public/compiled.php"), error_log_marker="private failure", env=baseline_environment) as port:
             verify(port, "/hello", "universe", "/find")
         native_command = [str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"]
-        with server(native_command, error_log_marker="private failure", env=baseline_environment) as port:
+        with application_server(native_command, error_log_marker="private failure", env=baseline_environment) as port:
             verify(port, "/hello", "universe", "/find")
         print("Installed build/native CLI, PHPStan max, declaration order and project relocation verified.", flush=True)
         verify_environment(php_command(project / "public/compiled.php"))
@@ -239,9 +319,9 @@ def main():
         (project / "public/index.php").unlink()
         (project / "var/build/server").unlink()
         run(["elephc", "--web", "--strict-php", str(project / "var/build/server.php")], project, env=build_environment)
-        with server(php_command(project / "public/compiled.php"), error_log_marker="private failure", env=baseline_environment) as port:
+        with application_server(php_command(project / "public/compiled.php"), error_log_marker="private failure", env=baseline_environment) as port:
             verify(port, "/hello", "universe", "/find")
-        with server([str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"], error_log_marker="private failure", env=baseline_environment) as port:
+        with application_server([str(project / "var/build/server"), "--listen", "127.0.0.1:{port}", "--workers", "1"], error_log_marker="private failure", env=baseline_environment) as port:
             verify(port, "/hello", "universe", "/find")
         print("Standalone compiled PHP/native verified without Composer loading, development/build code or configuration.", flush=True)
         verify_environment(php_command(project / "public/compiled.php"))

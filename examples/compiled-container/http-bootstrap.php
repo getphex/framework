@@ -5,6 +5,8 @@ declare(strict_types=1);
 require_once __DIR__.'/bootstrap.php';
 require_once __DIR__.'/../../src/Contracts/Runtime/RequestReader.php';
 require_once __DIR__.'/../../src/Contracts/Runtime/ErrorReporter.php';
+require_once __DIR__.'/../../src/Runtime/Logging/bootstrap.php';
+require_once __DIR__.'/../../src/Runtime/Logging/SapiLogOutput.php';
 require_once __DIR__.'/../../src/Contracts/Runtime/ResponseEmitter.php';
 require_once __DIR__.'/../../src/Contracts/Runtime/ResponseOutput.php';
 require_once __DIR__.'/../../src/Runtime/Http/InvalidRequest.php';

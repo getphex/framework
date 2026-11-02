@@ -22,6 +22,7 @@ require_once __DIR__.'/../Http/Message/Token.php';
 require_once __DIR__.'/../Http/Message/Headers.php';
 require_once __DIR__.'/../Http/Message/Request.php';
 require_once __DIR__.'/../Http/Message/Response.php';
+require_once __DIR__.'/Logging/bootstrap.php';
 require_once __DIR__.'/../Http/Middleware/Pipeline.php';
 require_once __DIR__.'/../Support/IntegerParser.php';
 require_once __DIR__.'/../Config/InvalidConfiguration.php';

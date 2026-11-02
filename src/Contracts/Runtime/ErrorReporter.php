@@ -8,5 +8,6 @@ use Throwable;
 
 interface ErrorReporter
 {
-    public function report(Throwable $error): void;
+    /** @param array<string, bool|float|int|string|null> $context */
+    public function report(Throwable $error, array $context = []): void;
 }

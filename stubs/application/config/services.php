@@ -16,10 +16,22 @@ use Phex\Container\Definition\Lifetime;
 use Phex\Container\Definition\Service;
 use Phex\Contracts\Http\Handler;
 use Phex\Contracts\Config\EnvironmentReader;
+use Phex\Contracts\Logging\Logger;
+use Phex\Contracts\Logging\LogOutput;
+use Phex\Http\Logging\RequestLogContext;
+use Phex\Http\Logging\RequestLogger;
+use Phex\Http\Logging\RequestLoggingMiddleware;
+use Phex\Logging\JsonLogger;
+use Phex\Runtime\Logging\SapiLogOutput;
 use Phex\Config\Environment;
 use Phex\Runtime\Environment\ProcessEnvironment;
 
 return new Container([
+    Service::constructor(LogOutput::class, Lifetime::Application, SapiLogOutput::class),
+    Service::factory(JsonLogger::class, Lifetime::Application, JsonLogger::class, 'create'),
+    Service::factory(RequestLogContext::class, Lifetime::Request, RequestLogContext::class, 'create'),
+    Service::constructor(Logger::class, Lifetime::Request, RequestLogger::class),
+    Service::constructor(RequestLoggingMiddleware::class, Lifetime::Request),
     Service::constructor(EnvironmentReader::class, Lifetime::Application, ProcessEnvironment::class),
     Service::constructor(Environment::class, Lifetime::Application),
     Service::factory(ApplicationSettings::class, Lifetime::Application, SettingsFactory::class, 'create'),
