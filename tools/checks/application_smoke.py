@@ -311,7 +311,7 @@ def main():
         print("One native executable verified with different runtime environments and invalid bootstrap configuration, without embedding build values.", flush=True)
 
         installed = project / "vendor/getphex/phex"
-        for relative in ("src/Build", "src/Runtime/Development", "src/Console", "stubs"):
+        for relative in ("src/Build", "src/Runtime/Development", "src/Console", "src/Database", "src/Contracts/Database", "stubs"):
             shutil.rmtree(installed / relative)
         for relative in ("config", "routes", "bootstrap", "vendor/composer"):
             shutil.rmtree(project / relative)

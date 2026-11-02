@@ -7,6 +7,8 @@
         "composer-runtime-api": "^2.2"
     },
     "require-dev": {
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
         "phpunit/phpunit": "^11.5"
     },
     "autoload": {
@@ -22,6 +24,8 @@
             "Phex\\Examples\\RequestLifecycle\\": "examples/request-lifecycle/",
             "Phex\\Examples\\CompiledContainer\\Generated\\": "var/generated/example/",
             "Phex\\Examples\\CompiledContainer\\": "examples/compiled-container/",
+            "Phex\\Examples\\Database\\Generated\\": "examples/database/var/generated/",
+            "Phex\\Examples\\Database\\": "examples/database/app/",
             "Phex\\Tests\\Generated\\": "var/generated/tests/",
             "App\\Generated\\": "stubs/application/var/generated/",
             "App\\": "stubs/application/app/"
@@ -40,6 +44,7 @@
             "@test:benchmarks",
             "@test:application",
             "@test:http",
+            "@test:database",
             "@test:native-lifecycle",
             "@test:compatibility"
         ],
@@ -49,6 +54,7 @@
             "@test:benchmarks",
             "@test:application",
             "@test:http",
+            "@test:database",
             "@test:native-lifecycle",
             "@test:compatibility"
         ],
@@ -69,12 +75,14 @@
             "@php bin/phex build tests/Build/named-routing.php",
             "@php bin/phex build tests/Build/configuration.php",
             "@php bin/phex build tests/Build/logging.php",
+            "@php bin/phex build examples/database/config/build.php",
             "@php bin/phex build stubs/application/config/build.php"
         ],
         "analyse:phpstan": "tools/phpstan/vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress",
         "test:build": "phpunit --testsuite Build",
         "test:compatibility": "python3 tools/checks/compatibility.py",
         "test:http": "python3 tools/checks/http_smoke.py",
+        "test:database": "python3 -B tools/checks/database_smoke.py",
         "build:web": [
             "@generate",
             "python3 tools/builds/elephc_web.py"
@@ -89,5 +97,9 @@
     },
     "bin": [
         "bin/phex"
-    ]
+    ],
+    "suggest": {
+        "ext-pdo": "Required when using the optional database adapter.",
+        "ext-pdo_sqlite": "Required for SQLite applications and the database example."
+    }
 }
