@@ -47,7 +47,7 @@ jobs:
           set -euo pipefail
           test "$(cat "$SDK_DIRECTORY/source-revision")" = "$ELEPHC_REVISION"
           "$SDK_DIRECTORY/elephc" --version
-          "$SDK_DIRECTORY/elephc" --capabilities > "$SDK_DIRECTORY/capabilities.txt"
+          "$SDK_DIRECTORY/elephc" --print-capabilities > "$SDK_DIRECTORY/capabilities.txt"
           python3 - <<'PY'
           import os, re
           from pathlib import Path
