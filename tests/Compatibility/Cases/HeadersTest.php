@@ -52,6 +52,7 @@ final class HeadersTest extends TestCase
         $removed = $original->without('x-TRACE');
 
         $this->assertNotSame($original, $replaced);
+        $this->assertNotSame($original, $removed);
         $this->assertSame(['first'], $original->values('X-Trace'));
         $this->assertSame(['replacement'], $replaced->values('X-Trace'));
         $this->assertSame(['first', 'second'], $appended->values('X-Trace'));
@@ -78,6 +79,32 @@ final class HeadersTest extends TestCase
 
         $this->assertSame(['value'], $added->values('x-new'));
         $this->assertSame([], $headers->without('missing')->all());
+    }
+
+    public function testRemovingAnAbsentHeaderReusesTheImmutableInstance(): void
+    {
+        $headers = new Headers([
+            'X-Empty' => [''],
+            'Set-Cookie' => ['a=1; Path=/', 'b=2; Path=/'],
+        ]);
+        $unchanged = $headers->without('X-MISSING');
+        $changed = $unchanged->without('sEt-CoOkIe');
+
+        $this->assertSame($headers, $unchanged);
+        $this->assertNotSame($headers, $changed);
+        $this->assertSame([''], $changed->values('x-empty'));
+        $this->assertSame(['a=1; Path=/', 'b=2; Path=/'], $headers->values('set-cookie'));
+        $this->assertSame([], $changed->values('set-cookie'));
+    }
+
+    public function testAbsentNumericHeadersAndEmptySetsAlsoReuseTheirInstance(): void
+    {
+        $empty = new Headers();
+        $numeric = new Headers(['123' => ['value']]);
+
+        $this->assertSame($empty, $empty->without('missing'));
+        $this->assertSame($numeric, $numeric->without('456'));
+        $this->assertSame(['value'], $numeric->values('123'));
     }
 
     public function testAllHttpTokenCharactersAreAcceptedInNames(): void

@@ -82,8 +82,13 @@ final readonly class Headers
 
     public function without(string $name): self
     {
+        $key = strtolower($name);
+        if (!isset($this->fields[$key])) {
+            return $this;
+        }
+
         $fields = $this->fields;
-        unset($fields[strtolower($name)]);
+        unset($fields[$key]);
 
         return new self($fields);
     }
