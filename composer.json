@@ -37,6 +37,7 @@
             "@generate",
             "@analyse:phpstan",
             "@test:build",
+            "@test:benchmarks",
             "@test:application",
             "@test:http",
             "@test:native-lifecycle",
@@ -45,6 +46,7 @@
         "test": [
             "@generate",
             "@test:build",
+            "@test:benchmarks",
             "@test:application",
             "@test:http",
             "@test:native-lifecycle",
@@ -79,7 +81,8 @@
         ],
         "test:application": "python3 tools/checks/application_smoke.py",
         "test:persistent": "python3 tools/checks/persistent_application.py",
-        "test:native-lifecycle": "python3 tools/checks/native_lifecycle.py"
+        "test:native-lifecycle": "python3 tools/checks/native_lifecycle.py",
+        "test:benchmarks": "python3 -B -m unittest discover -s tools/benchmarks/tests -p 'test_*.py'"
     },
     "config": {
         "sort-packages": true
