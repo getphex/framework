@@ -45,6 +45,11 @@ the same definitions without generating artifacts.
 An independent application skeleton and Composer-installed CLI support creating
 projects, generating static bootstraps and compiling native web servers.
 
+The optional database module adds PDO access with typed row mapping and
+request-owned transaction cleanup. The [SQLite CRUD example](examples/database/README.md)
+runs on development PHP, generated PHP and native ElephC, including retained
+connections with application lifecycle.
+
 ## Requirements
 
 - PHP 8.3 or newer within PHP 8.x.
@@ -1111,8 +1116,17 @@ request cleanup, shutdown, worker recycling and worker-count overrides. It then
 relocates the project, removes Composer/build/development/configuration sources,
 recompiles the native graph and starts with PHP absent from `PATH`. Set
 `PHEX_ELEPHC` to select the compiler for this command. CI runs the full check on
-release 0.27.6 and the pinned `nightly-20261029`, with the persistent test required
-on the nightly for both PHP 8.3 and 8.5.
+release 0.27.6 and the source SDK pinned to `9419f7ac`, with the persistent test
+required on the source SDK for both PHP 8.3 and 8.5. The SDK is built once with
+Rust 1.98, verified with all advertised runtime archives and cached by source
+revision. CI uses Ubuntu 24.04 and Node 24 action versions.
+
+`composer test:database` installs the optional SQLite CRUD example in a separate
+application and verifies prepared parameters, typed results, persistent rows,
+physical connection lifetime, unfinished-transaction rollback and error recovery
+over HTTP. It checks development PHP, generated PHP and native request lifecycle,
+plus application lifecycle when supported. PHP needs `pdo_sqlite` for these
+checks; applications without the database adapter have no PDO requirement.
 
 `composer test:application` creates a project outside this checkout, installs a
 mirrored package without Packagist access, removes its original package source,
