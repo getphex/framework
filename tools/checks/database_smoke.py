@@ -125,7 +125,7 @@ def verify_recycling_workers(port):
         while True:
             try:
                 return request(port, 'GET', path)
-            except ConnectionRefusedError:
+            except (ConnectionRefusedError, ConnectionResetError):
                 # All quota-limited workers can briefly be between generations.
                 if time.monotonic() >= deadline:
                     raise
