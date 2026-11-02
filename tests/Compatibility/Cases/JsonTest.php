@@ -140,6 +140,10 @@ final class JsonTest extends TestCase
         $object = JsonObject::decode('{"name":"Ada","optional":null,"nested":{"value":7}}');
         $copy = $object->all();
         $copy['name'] = 'changed';
+        $copy['nested'] = ['value' => 9];
+        array_pop($copy);
+        $fieldCount = count($object->all());
+        $this->assertSame(3, $fieldCount);
         $this->assertSame('Ada', $object->get('name'));
         $this->assertNull($object->get('missing'));
         $this->assertNull($object->get('optional'));

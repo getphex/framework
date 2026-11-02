@@ -38,6 +38,11 @@ final readonly class JsonObject
     /** @return array<int|string, mixed> */
     public function all(): array
     {
-        return $this->values;
+        $snapshot = [];
+        foreach ($this->values as $name => $value) {
+            $snapshot[$name] = $value;
+        }
+
+        return $snapshot;
     }
 }
