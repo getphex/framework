@@ -10,7 +10,7 @@ use Phex\Database\ConnectionConfig;
 use Phex\Database\DatabaseError;
 use Phex\Database\MappingError;
 use Phex\Database\Parameters;
-use Phex\Database\PdoConnection;
+use Phex\Database\PDOConnection;
 use Phex\Database\Row;
 use Phex\Database\Session;
 use Phex\Kernel\Scope\RequestScope;
@@ -26,12 +26,12 @@ use RuntimeException;
 
 final class DatabaseTest extends TestCase
 {
-    private PdoConnection $driver;
+    private PDOConnection $driver;
     private Session $database;
 
     protected function setUp(): void
     {
-        $this->driver = PdoConnection::connect(new ConnectionConfig('sqlite::memory:'));
+        $this->driver = PDOConnection::connect(new ConnectionConfig('sqlite::memory:'));
         $this->database = new Session($this->driver);
         $this->database->execute('CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, active INTEGER NOT NULL, amount REAL NOT NULL, note TEXT)');
     }

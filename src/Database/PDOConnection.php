@@ -11,7 +11,7 @@ use PDOStatement;
 use Phex\Contracts\Database\Connection;
 use Throwable;
 
-final class PdoConnection implements Connection
+final class PDOConnection implements Connection
 {
     private PDO $pdo;
     private bool $closed = false;
@@ -25,10 +25,10 @@ final class PdoConnection implements Connection
         ]);
     }
 
-    public static function connect(ConnectionConfig $config): PdoConnection
+    public static function connect(ConnectionConfig $config): PDOConnection
     {
         try {
-            return new PdoConnection($config);
+            return new PDOConnection($config);
         } catch (PDOException $error) {
             throw new DatabaseError('Database connection failed.', 0, $error);
         }

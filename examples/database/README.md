@@ -70,7 +70,7 @@ deletion returns `204`. File-backed rows persist across requests in every target
 
 ## Ownership and mapping
 
-`config/services.php` binds `Connection` to `PdoConnection` with application
+`config/services.php` binds `Connection` to `PDOConnection` with application
 lifetime and `Session` with request lifetime. Repositories receive the session,
 never the physical PDO handle. A physical connection permits one active session.
 Closing the request session rolls back an unfinished transaction and releases

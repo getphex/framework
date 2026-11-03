@@ -14,5 +14,5 @@ require_once __DIR__.'/Row.php';
 require_once __DIR__.'/QueryResult.php';
 require_once __DIR__.'/../Contracts/Database/RowMapper.php';
 require_once __DIR__.'/../Contracts/Database/Connection.php';
-require_once __DIR__.'/PdoConnection.php';
+require_once __DIR__.'/PDOConnection.php';
 require_once __DIR__.'/Session.php';

@@ -13,7 +13,7 @@ use Phex\Contracts\Http\Handler;
 use Phex\Contracts\Logging\Logger;
 use Phex\Contracts\Logging\LogOutput;
 use Phex\Database\ConnectionConfig;
-use Phex\Database\PdoConnection;
+use Phex\Database\PDOConnection;
 use Phex\Database\Session;
 use Phex\Examples\Database\DatabaseFactory;
 use Phex\Examples\Database\Handlers;
@@ -32,7 +32,7 @@ return new Container([
     Service::constructor(EnvironmentReader::class, Lifetime::Application, ProcessEnvironment::class),
     Service::constructor(Environment::class, Lifetime::Application),
     Service::factory(ConnectionConfig::class, Lifetime::Application, DatabaseFactory::class, 'configuration'),
-    Service::factory(Connection::class, Lifetime::Application, PdoConnection::class, 'connect'),
+    Service::factory(Connection::class, Lifetime::Application, PDOConnection::class, 'connect'),
     Service::constructor(Session::class, Lifetime::Request),
     Service::constructor(UserMapper::class, Lifetime::Application),
     Service::constructor(UserRepository::class, Lifetime::Request),
