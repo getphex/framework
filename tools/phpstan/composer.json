@@ -2,6 +2,7 @@
     "name": "getphex/phpstan-tools",
     "description": "Isolated static analysis tooling for Phex.",
     "type": "project",
+    "license": "MIT",
     "require": {
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-phpunit": "^2.0"

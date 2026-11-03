@@ -27,7 +27,7 @@ def install_project(directory):
     package.mkdir()
     for name in ("src", "bin", "stubs"):
         shutil.copytree(ROOT / name, package / name, ignore=shutil.ignore_patterns("vendor", "var", "__pycache__"))
-    for name in ("composer.json", "README.md"):
+    for name in ("composer.json", "README.md", "LICENSE"):
         shutil.copy2(ROOT / name, package / name)
     project = directory / "my app's $"
     run(["php", str(ROOT / "bin/phex"), "new", str(project)], ROOT)

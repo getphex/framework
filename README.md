@@ -1161,3 +1161,8 @@ The compiled matcher is compared with `TableMatcher` across methods, overlapping
 patterns, method-specific captures, numeric literals/methods, encoded bytes, empty
 segments, query strings, malformed input, and interleaved calls. The compiled
 container example uses the generated matcher in the real PHP/native HTTP checks.
+
+## License
+
+Phex is licensed under the [MIT License](LICENSE).
+Copyright (c) 2026 Vincenzo Petrucci (Illegal Studio).
