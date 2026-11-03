@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Emits a standalone shell launcher that applies native server defaults and checks
+ * lifecycle compatibility.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Build\Emitter;

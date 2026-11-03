@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Builds the named-route fixture used to compare generated and interpreted URL generation.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Build\Compiler\BuildConfig;

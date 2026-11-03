@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Loads declarations and the generated container needed by the compiled-container CLI
+ * demonstration.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 require_once __DIR__.'/../request-lifecycle/bootstrap.php';

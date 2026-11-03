@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Associates a route's method and path with an endpoint service type and optional route
+ * name.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Container\Definition;

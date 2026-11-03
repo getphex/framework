@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Loads typed container and route definitions from configuration files before analysis.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Container\Definition;

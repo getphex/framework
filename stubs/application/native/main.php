@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Serves one native request through a fresh generated application container and shared
+ * HTTP host.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use App\Generated\ApplicationContainer;

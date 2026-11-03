@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Parses and validates route segments and supports trusted build-validated segment
+ * metadata.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Routing\Definition;

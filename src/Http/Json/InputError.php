@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Specializes input failures for malformed JSON, unsupported media types and decoded field
+ * validation.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Http\Json;

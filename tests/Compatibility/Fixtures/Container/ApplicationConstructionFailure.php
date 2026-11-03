@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Retains a previously created repository in an application-construction failure for
+ * cleanup assertions.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Tests\Compatibility\Fixtures\Container;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Defines typed middleware that can delegate to the next HTTP handler or return a response
+ * directly.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Contracts\Http;

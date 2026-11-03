@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Serves controlled transport responses and echoed input for real PHP/native HTTP socket
+ * checks.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Tests\Runtime\Fixtures;

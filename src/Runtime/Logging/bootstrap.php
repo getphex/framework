@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Loads logging declarations and the SAPI log adapter without bringing development tooling
+ * into native builds.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 // Declaration-only logging graph, also usable by native CLI hosts with a custom output.

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Describes an application's source roots, generated container and native server build
+ * settings.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Build\Compiler;

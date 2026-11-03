@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Provides a close-counting application resource to demonstrate generated container
+ * ownership.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Examples\CompiledContainer;

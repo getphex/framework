@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Reports process identity and PHP state counters to characterize native request resets
+ * and worker reuse.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 final class NativeLifecycleApplication

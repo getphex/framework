@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Matches prevalidated route tables with literal precedence and explicit method fallback
+ * behavior.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Routing\Matcher;

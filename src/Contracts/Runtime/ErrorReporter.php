@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Defines runtime error reporting with explicit context while keeping transport policy
+ * outside the kernel.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Contracts\Runtime;

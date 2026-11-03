@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Preserves validated route metadata and parsed segments for matcher and URL-generator
+ * emission.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Build\Graph;

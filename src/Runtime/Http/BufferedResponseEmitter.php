@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Applies HTTP body and content-length rules before sending a buffered response through a
+ * typed output.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Runtime\Http;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Records master preload startup and initializes probe state for native worker recycling
+ * checks.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 global $phexLifecyclePreload;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Validates greeting JSON fields and returns a concrete input DTO without runtime
+ * reflection.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace App\Input;

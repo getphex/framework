@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Demonstrates generated service lifetimes by handling two explicit user requests from the
+ * command line.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Examples\CompiledContainer\Generated\ApplicationContainer;

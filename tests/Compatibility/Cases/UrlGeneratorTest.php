@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Verifies named-route encoding, matcher round trips, parameter failures and shared
+ * container integration.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Tests\Compatibility\Cases;

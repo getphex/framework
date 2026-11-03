@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Declares named user collection and item CRUD routes for both interpreted and generated
+ * routing.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Container\Definition\EndpointRoute;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Interprets validated service definitions for build-free PHP development with explicit
+ * application ownership.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Runtime\Development;

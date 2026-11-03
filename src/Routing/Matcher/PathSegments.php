@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Splits incoming request paths before decoding each segment once and rejecting malformed
+ * or control bytes.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Routing\Matcher;

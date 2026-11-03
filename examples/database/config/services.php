@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Binds application-owned PDO connections, request-owned sessions and the SQLite example's
+ * HTTP dependencies.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Config\Environment;

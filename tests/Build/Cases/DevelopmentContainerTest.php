@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Compares interpreted service lifetimes, routing and failure behavior with generated
+ * containers on PHP.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Tests\Build\Cases;

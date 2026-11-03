@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Stores immutable HTTP fields with case-insensitive lookup, ordered repeated values and
+ * validated updates.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Http\Message;

@@ -1053,6 +1053,29 @@ Isolation modes and server options are described in the
 
 ## Static analysis
 
+Every PHP source file starts with a file-level PHPDoc explaining its purpose.
+This includes framework code, tests, fixtures, examples, the application skeleton,
+the CLI and analysis stubs. PHP generators emit equivalent purpose headers for
+their artifacts. Keep these file descriptions separate from class and method
+annotations, including generic templates.
+
+Use the same metadata template in maintained and generated PHP files:
+
+```php
+<?php
+
+/**
+ * Explains the specific purpose of this file.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
+declare(strict_types=1);
+```
+
 ```sh
 composer tools:install
 composer analyse

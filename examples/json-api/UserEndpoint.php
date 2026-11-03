@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Converts a captured user ID and returns it as explicit JSON output for routing
+ * demonstrations.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Examples\JsonApi;

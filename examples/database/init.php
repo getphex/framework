@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Initializes the example's SQLite schema explicitly using the runtime DSN and
+ * deterministic connection cleanup.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Config\Environment;

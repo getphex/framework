@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Creates trusted random correlation identifiers independently of client-supplied request
+ * headers.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Runtime\Http;

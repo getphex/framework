@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Describes application sources, generated container output and optional native server
+ * configuration.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Build\Compiler\ApplicationConfig;

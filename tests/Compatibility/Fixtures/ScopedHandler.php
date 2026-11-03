@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Checks that its owned resource stays open while returning controlled HTTP success or
+ * failure.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Tests\Compatibility\Fixtures;

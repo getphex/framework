@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Verifies retained application state with fresh request data, failure recovery and one-
+ * time shutdown cleanup.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Tests\Compatibility\Cases;

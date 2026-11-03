@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Discovers application declarations and orders their dependencies for explicit runtime
+ * includes.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Build\Compiler;

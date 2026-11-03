@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Provides an immutable environment snapshot for explicit configuration and repeatable
+ * tests.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Config;

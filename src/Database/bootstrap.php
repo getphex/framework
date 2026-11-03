@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Loads the optional database declaration graph explicitly for compiled PHP and native
+ * applications.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 // Optional declaration graph. Database-free entries do not load or link PDO.

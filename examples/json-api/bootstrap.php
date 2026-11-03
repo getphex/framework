@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Loads the shared routing and example declarations required by the portable JSON API
+ * demonstration.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 require_once __DIR__.'/../hello-world/bootstrap.php';

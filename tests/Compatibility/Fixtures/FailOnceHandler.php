@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Fails its first invocation and succeeds later to test reusable middleware after
+ * exceptions.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Tests\Compatibility\Fixtures;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Writes generated artifacts atomically and preserves identical files without rewriting
+ * them.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Build\Compiler;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Defines routed request handling with explicit path parameters and immutable HTTP
+ * messages.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Contracts\Routing;

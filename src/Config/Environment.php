@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Reads and validates typed environment values, defaults and bounds through an injected
+ * reader.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Config;

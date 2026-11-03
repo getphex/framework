@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Carries a created user's identity and name and maps them explicitly to JSON output
+ * fields.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Examples\CompiledContainer;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Serves the example in PHP development by interpreting service definitions without
+ * generating artifacts.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Build\Compiler\BuildConfig;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Carries a matched route and parameters or an explicit routing failure with allowed
+ * methods.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Routing\Matcher;

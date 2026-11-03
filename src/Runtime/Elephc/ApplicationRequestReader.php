@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Maps an owned ElephC worker request into immutable framework input for application
+ * lifecycle execution.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Runtime\Elephc;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Loads the fixed shared framework declaration graph used by generated PHP and native
+ * bootstraps.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 // Declaration-only runtime graph shared by compiled PHP and ElephC.

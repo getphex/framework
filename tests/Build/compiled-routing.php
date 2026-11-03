@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Declares the generated routing fixture used to compare fixed matching with interpreted
+ * route tables.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Build\Compiler\BuildConfig;

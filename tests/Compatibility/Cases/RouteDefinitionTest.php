@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Verifies route pattern validation and rejection of structurally ambiguous route
+ * definitions.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Tests\Compatibility\Cases;

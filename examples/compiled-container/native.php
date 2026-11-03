@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Serves the compiled-container example through ElephC's request-lifecycle native web
+ * adapters.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Examples\CompiledContainer\WebApplication;

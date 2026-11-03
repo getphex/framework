@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Selects the native lifecycle and supplies build-time defaults for server startup
+ * options.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Build\Config\NativeLifecycle;

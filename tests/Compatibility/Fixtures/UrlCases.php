@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Defines named-route fixtures shared by interpreted and compiled URL generation tests.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Tests\Compatibility\Fixtures;

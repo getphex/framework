@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Validates explicit service graphs, factory signatures, routes and dependency lifetimes
+ * before code generation.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Build\Analysis;

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Handles lookup, update and deletion of one user identified by a validated route
+ * parameter.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Examples\Database;

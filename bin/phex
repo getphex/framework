@@ -1,6 +1,16 @@
 #!/usr/bin/env php
 <?php
 
+/**
+ * Runs project creation, static application builds and native compilation through the
+ * installed Phex CLI.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Build\Compiler\BuildConfig;

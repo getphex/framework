@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Serves the SQLite example through a newly created native application container for each
+ * request.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Examples\Database\Generated\ApplicationContainer;

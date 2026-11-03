@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Handles consecutive requests to demonstrate distinct request resources around shared
+ * application state.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 use Phex\Examples\JsonApi\JsonApi;

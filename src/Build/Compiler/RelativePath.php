@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Computes relative include paths so generated application bootstraps survive relocation.
+ *
+ * @package Phex
+ * @link https://github.com/getphex/phex
+ * @license MIT
+ * @copyright Vincenzo Petrucci (Illegal Studio)
+ */
+
 declare(strict_types=1);
 
 namespace Phex\Build\Compiler;
