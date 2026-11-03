@@ -1,0 +1,118 @@
+name: Publish application skeleton
+
+on:
+  pull_request:
+    paths:
+      - 'stubs/application/**'
+      - '.github/workflows/split.yml'
+  workflow_run:
+    workflows: [Compatibility]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: application-split-${{ github.event.pull_request.number || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      source: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Record the checked source
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+      - name: Validate the packages
+        run: |
+          composer validate --strict
+          composer --working-dir=stubs/application validate --strict
+          composer install --no-dev --no-interaction --prefer-dist
+      - name: Install and build an independent application
+        run: |
+          php bin/phex new "$RUNNER_TEMP/phex-split-check" --local
+          composer --working-dir="$RUNNER_TEMP/phex-split-check" install --no-dev --no-interaction --prefer-dist
+          composer --working-dir="$RUNNER_TEMP/phex-split-check" build
+      - name: Check the split without credentials
+        uses: illegalstudio/.github/actions/subtree-mirror@7d0fe5f779e7c303be1d20696d6c9b8baacc7b89
+        with:
+          prefix: stubs/application
+          repository: getphex/phex
+          history: flatten
+
+  publish:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ needs.check.outputs.source }}
+      - name: Require the current main and successful compatibility checks
+        id: ready
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ needs.check.outputs.source }}
+        run: |
+          set -euo pipefail
+          current=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [[ $SOURCE_SHA != "$current" ]]; then
+            echo "Source is no longer current main; a newer run will publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          passed=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/compatibility.yml/runs" \
+            -f head_sha="$SOURCE_SHA" -f event=push -f status=success --jq .total_count)
+          if [[ $passed -lt 1 ]]; then
+            echo "::error::Compatibility must pass on this exact source commit before publication."
+            exit 1
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+      - name: Publish the application skeleton
+        id: mirror
+        if: steps.ready.outputs.publish == 'true'
+        uses: illegalstudio/.github/actions/subtree-mirror@7d0fe5f779e7c303be1d20696d6c9b8baacc7b89
+        with:
+          prefix: stubs/application
+          repository: getphex/phex
+          history: flatten
+          message: 'chore: sync application skeleton'
+          push: 'true'
+          app-id: ${{ secrets.PHEX_BOT_APP_ID }}
+          private-key: ${{ secrets.PHEX_BOT_PRIVATE_KEY }}
+      - name: Record the mirror revision
+        if: steps.ready.outputs.publish == 'true'
+        env:
+          MIRROR_SHA: ${{ steps.mirror.outputs.sha }}
+          PUBLISHED: ${{ steps.mirror.outputs.published }}
+        run: |
+          {
+            echo "Mirror: getphex/phex"
+            echo "Commit: $MIRROR_SHA"
+            echo "Updated: $PUBLISHED"
+          } >> "$GITHUB_STEP_SUMMARY"
