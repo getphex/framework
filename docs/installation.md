@@ -25,12 +25,17 @@ On Debian or Ubuntu, native builds need `libbz2-dev` in addition to the usual na
 
 ## Create an application from this checkout
 
-Phex is in development and does not yet have a package release. The supported starting point is a framework checkout with an explicit local Composer dependency:
+Phex is in development and does not yet have a package release. The framework
+package is `getphex/framework`; the `getphex/phex` application repository is an
+automatic split of its template. See [Package distribution](distribution.md).
+
+The supported starting point is a framework checkout with an explicit local
+Composer dependency:
 
 ```sh
 # Start outside the framework repository.
-git clone https://github.com/getphex/phex.git
-cd phex
+git clone https://github.com/getphex/framework.git
+cd framework
 composer install --no-dev
 php bin/phex new ../my-app --local
 cd ../my-app

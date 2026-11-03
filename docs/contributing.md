@@ -48,7 +48,7 @@ Every maintained PHP source begins with this file-level PHPDoc, after `<?php` an
  * Explains the specific purpose of this file.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */
@@ -78,6 +78,9 @@ Avoid publishing performance claims from a single unmatched request path. [Bench
 
 Phex is distributed under the [MIT License](../LICENSE), with the copyright attribution in its file headers and license notice. Preserve the notice when distributing project code.
 
+The [distribution guide](distribution.md) describes the canonical skeleton,
+automatic publication and package release boundary.
+
 ---
 
-[Previous: Troubleshooting](troubleshooting.md) | [Next: Benchmarking and profiling](benchmarks.md)
+[Previous: Troubleshooting](troubleshooting.md) | [Next: Package distribution](distribution.md)

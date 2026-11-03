@@ -43,7 +43,7 @@ The existing environment bindings remain in place. Inject `Session` into request
 Development PHP uses Composer autoloading. Generated PHP and native execution use explicit declaration graphs. In your application's `public/compiled.php`, `native/main.php` and `native/application.php`, add this before the generated bootstrap include:
 
 ```php
-require_once __DIR__.'/../vendor/getphex/phex/src/Database/bootstrap.php';
+require_once __DIR__.'/../vendor/getphex/framework/src/Database/bootstrap.php';
 ```
 
 This opts the entry into the database module. The core shared bootstrap does not load database declarations for applications that do not use them. Rebuild after changing these entries.

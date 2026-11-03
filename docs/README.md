@@ -52,6 +52,7 @@ This handbook describes the current development checkout. Start on PHP with no g
 - [CLI reference](cli.md)
 - [Troubleshooting](troubleshooting.md)
 - [Contributing to Phex](contributing.md)
+- [Package distribution](distribution.md)
 - [Benchmarking and profiling](benchmarks.md)
 
 ## Read examples in context

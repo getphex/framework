@@ -34,7 +34,7 @@ Run `composer dump-autoload`, then create `tests/GreetActionTest.php`:
  * Verifies the greeting action with explicit request input.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */
@@ -101,7 +101,7 @@ parameters:
     phpVersion: 80300
     paths: [app, config, routes, native, var/generated]
     bootstrapFiles: [vendor/autoload.php]
-    scanFiles: [vendor/getphex/phex/src/Runtime/Elephc/analysis.stub]
+    scanFiles: [vendor/getphex/framework/src/Runtime/Elephc/analysis.stub]
     tmpDir: var/cache/phpstan
 ```
 

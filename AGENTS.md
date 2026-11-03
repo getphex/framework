@@ -13,7 +13,7 @@ imports or declarations:
  * Explains the specific purpose of this file.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */
@@ -44,3 +44,13 @@ The same template is documented in [Contributing](docs/contributing.md#php-file-
 - Update the relevant guides when behavior changes and verify local links,
   anchors and copyable examples. Keep internal journal details out of user guides.
 - Follow the [documentation contribution guide](docs/contributing.md#maintain-the-documentation).
+
+## Application skeleton distribution
+
+- Maintain the application template only in `stubs/application/`. The
+  `getphex/phex` repository is its automatically published mirror.
+- Keep framework package `getphex/framework` and application project
+  `getphex/phex` distinct. Update installed-package paths and the relevant guides
+  when changing their distribution.
+- Follow [Package distribution](docs/distribution.md) when editing the split
+  workflow or preparing a release.

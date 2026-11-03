@@ -110,8 +110,9 @@ and [Native servers](docs/native.md) describe runtime configuration and artifact
 The framework checkout includes [hello-world](examples/hello-world/),
 [routing](examples/json-api/), [request lifetimes](examples/request-lifecycle/),
 [compiled containers](examples/compiled-container/) and
-[persistent SQLite CRUD](docs/database-tutorial.md). Full application templates
-live in [stubs/application](stubs/application/).
+[persistent SQLite CRUD](docs/database-tutorial.md). The canonical application template
+lives in [stubs/application](stubs/application/) and is automatically published to
+[getphex/phex](https://github.com/getphex/phex). See [Package distribution](docs/distribution.md).
 
 ## Static analysis
 

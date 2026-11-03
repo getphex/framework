@@ -64,7 +64,8 @@ A successful native build creates `server`, `server.lifecycle` and `start`. Depl
 
 ## Framework checkout
 
-The framework repository contains `src/`, shared compatibility cases, build-host tests, `examples/` and `stubs/application/`. Its Composer commands support framework development. The commands in a newly created application's manifest are smaller; [CLI reference](cli.md) distinguishes the two working directories.
+The framework repository contains `src/`, shared compatibility cases, build-host tests, `examples/` and `stubs/application/`. The template is automatically published to the `getphex/phex` mirror; see
+[Package distribution](distribution.md). Its Composer commands support framework development. The commands in a newly created application's manifest are smaller; [CLI reference](cli.md) distinguishes the two working directories.
 
 ---
 

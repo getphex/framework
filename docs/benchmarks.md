@@ -62,4 +62,4 @@ This documentation does not publish a universal requests-per-second figure. Repr
 
 ---
 
-[Previous: Contributing to Phex](contributing.md)
+[Previous: Package distribution](distribution.md)

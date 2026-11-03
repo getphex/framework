@@ -23,7 +23,7 @@ Create `app/Http/Middleware/PoweredBy.php`:
  * Adds a response header around downstream request handling.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

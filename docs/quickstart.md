@@ -25,7 +25,7 @@ Create `app/Support/Greeter.php`:
  * Builds greeting messages without retaining request state.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */
@@ -56,7 +56,7 @@ Create `app/Http/Action/HelloAction.php`:
  * Returns a greeting for the name captured by the hello route.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */
