@@ -16,7 +16,9 @@ ElephC compiles the same shared application sources into a native HTTP executabl
 
 ## Compiler requirements
 
-The default request lifecycle works with release ElephC 0.27.6. Application lifecycle requires a compiler whose help includes `--web-lifecycle`; the current compatibility matrix also tests a complete source SDK pinned to `9419f7ac`.
+The default request lifecycle works with release ElephC 0.27.6. Application lifecycle requires a compiler whose help includes `--web-lifecycle`; the compatibility matrix targets the precompiled release SDK 0.27.7 for this mode.
+Phex CI downloads official release archives and checks their SHA-256 and required
+runtime libraries. It never compiles ElephC from source.
 
 Inspect your SDK:
 

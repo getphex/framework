@@ -54,3 +54,10 @@ The same template is documented in [Contributing](docs/contributing.md#php-file-
   when changing their distribution.
 - Follow [Package distribution](docs/distribution.md) when editing the split
   workflow or preparing a release.
+
+## ElephC in CI
+
+- Use precompiled official ElephC release SDKs in Phex CI. Never build the
+  compiler or runtime archives from source here, including as a fallback.
+- Pin release tags, verify archive SHA-256 checksums and SDK completeness, and
+  require application-lifecycle capability for persistent-worker checks.

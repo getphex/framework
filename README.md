@@ -62,8 +62,9 @@ and a learning path from your first endpoint to PHP/native deployment.
 ## Requirements
 
 - PHP 8.3 or newer within PHP 8.x and Composer 2 for applications.
-- A complete ElephC SDK for native compilation; CI tests release 0.27.6 and a
-  source SDK pinned to `9419f7ac` with application-lifecycle support.
+- A complete ElephC SDK for native compilation; CI targets release 0.27.6 and
+  precompiled release 0.27.7 with application-lifecycle support. The CI downloads
+  official release SDKs and does not build ElephC from source.
 - PDO and the selected driver when using the optional database adapter.
 - Python 3.10+ and `pdo_sqlite` for framework development checks.
 

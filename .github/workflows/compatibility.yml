@@ -8,63 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  native-sdk:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    env:
-      ELEPHC_REVISION: 9419f7ac8cfd1e76cdf3ece856d23602bcab1ae2
-      SDK_DIRECTORY: ${{ github.workspace }}/var/toolchains/elephc-ci
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0, Node 24
-        id: sdk-cache
-        with:
-          path: ${{ env.SDK_DIRECTORY }}
-          key: elephc-sdk-ubuntu24-x64-${{ env.ELEPHC_REVISION }}-rust1.98-host-opt1-runtime-opt3-v1
-      - name: Build pinned ElephC SDK
-        if: steps.sdk-cache.outputs.cache-hit != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends --yes libbz2-dev
-          rustup toolchain install 1.98.0 --profile minimal --no-self-update
-          phex_source_directory="$(mktemp -d "$RUNNER_TEMP/phex-elephc-source.XXXXXX")"
-          trap 'rm -rf -- "$phex_source_directory"' EXIT
-          gh api "repos/illegalstudio/elephc/tarball/$ELEPHC_REVISION" > "$phex_source_directory/source.tar.gz"
-          tar -xzf "$phex_source_directory/source.tar.gz" -C "$phex_source_directory" --strip-components=1
-          (
-            cd "$phex_source_directory"
-            cargo +1.98.0 --config profile.release.package.elephc.opt-level=1 build --release --locked --jobs 2
-          )
-          mkdir -p "$SDK_DIRECTORY"
-          cp "$phex_source_directory/target/release/elephc" "$SDK_DIRECTORY/"
-          cp "$phex_source_directory"/target/release/libelephc_*.a "$SDK_DIRECTORY/"
-          printf '%s\n' "$ELEPHC_REVISION" > "$SDK_DIRECTORY/source-revision"
-      - name: Verify and package SDK
-        run: |
-          set -euo pipefail
-          test "$(cat "$SDK_DIRECTORY/source-revision")" = "$ELEPHC_REVISION"
-          "$SDK_DIRECTORY/elephc" --version
-          "$SDK_DIRECTORY/elephc" --print-capabilities > "$SDK_DIRECTORY/capabilities.txt"
-          python3 - <<'PY'
-          import os, re
-          from pathlib import Path
-          sdk = Path(os.environ['SDK_DIRECTORY'])
-          archives = set(re.findall(r'libelephc_[A-Za-z0-9_]+\.a', (sdk/'capabilities.txt').read_text()))
-          assert archives and all((sdk/name).is_file() for name in archives), 'Incomplete ElephC runtime SDK'
-          print('Verified runtime archives:', len(archives))
-          PY
-          tar -czf "$RUNNER_TEMP/elephc-sdk.tar.gz" -C "$SDK_DIRECTORY" .
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node 24
-        with:
-          name: elephc-sdk-linux-x86_64
-          path: ${{ runner.temp }}/elephc-sdk.tar.gz
-          retention-days: 3
-          compression-level: 0
   http:
-    needs: native-sdk
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -72,13 +16,9 @@ jobs:
         php: ['8.3', '8.5']
         elephc:
           - tag: v0.27.6
-            archive: v0.27.6
             application: false
-            source: false
-          - tag: source-9419f7ac
-            archive: source
+          - tag: v0.27.7
             application: true
-            source: true
     env:
       ELEPHC_VERSION: ${{ matrix.elephc.tag }}
     steps:
@@ -94,14 +34,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends --yes libbz2-dev
       - name: Install ElephC
-        if: matrix.elephc.source == false
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           phex_toolchain_dir="$(mktemp -d "$RUNNER_TEMP/phex-elephc.XXXXXX")"
           echo "PHEX_ELEPHC_DIR=$phex_toolchain_dir" >> "$GITHUB_ENV"
-          phex_archive="elephc-${{ matrix.elephc.archive }}-x86_64-unknown-linux-gnu.tar.gz"
+          phex_archive="elephc-${ELEPHC_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
           gh release download "$ELEPHC_VERSION" --repo illegalstudio/elephc \
             --pattern "$phex_archive" --pattern "$phex_archive.sha256" \
             --dir "$phex_toolchain_dir"
@@ -109,20 +48,23 @@ jobs:
           sha256sum --check "$phex_archive.sha256"
           tar -xzf "$phex_archive"
           echo "$phex_toolchain_dir" >> "$GITHUB_PATH"
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2, Node 24
-        if: matrix.elephc.source
-        with:
-          name: elephc-sdk-linux-x86_64
-          path: ${{ runner.temp }}/phex-sdk-artifact
-      - name: Install pinned source SDK
-        if: matrix.elephc.source
+      - name: Verify the precompiled SDK
+        env:
+          REQUIRE_APPLICATION: ${{ matrix.elephc.application }}
         run: |
-          set -euo pipefail
-          phex_toolchain_dir="$(mktemp -d "$RUNNER_TEMP/phex-elephc.XXXXXX")"
-          echo "PHEX_ELEPHC_DIR=$phex_toolchain_dir" >> "$GITHUB_ENV"
-          tar -xzf "$RUNNER_TEMP/phex-sdk-artifact/elephc-sdk.tar.gz" -C "$phex_toolchain_dir"
-          test "$(cat "$phex_toolchain_dir/source-revision")" = 9419f7ac8cfd1e76cdf3ece856d23602bcab1ae2
-          echo "$phex_toolchain_dir" >> "$GITHUB_PATH"
+          elephc --version
+          python3 - <<'PYTHON'
+          import os, re, subprocess
+          from pathlib import Path
+          sdk = Path(os.environ['PHEX_ELEPHC_DIR'])
+          capabilities = subprocess.check_output([str(sdk/'elephc'), '--print-capabilities'], text=True)
+          archives = set(re.findall(r'libelephc_[A-Za-z0-9_]+\.a', capabilities))
+          assert archives and all((sdk/name).is_file() for name in archives), 'Incomplete precompiled ElephC SDK'
+          if os.environ['REQUIRE_APPLICATION'] == 'true':
+              help_text = subprocess.check_output([str(sdk/'elephc'), '--help'], text=True)
+              assert '--web-lifecycle' in help_text, 'Release SDK must support application lifecycle'
+          print('Verified precompiled runtime archives:', len(archives))
+          PYTHON
       - run: composer install --no-interaction --prefer-dist
       - run: composer tools:install
       - run: composer check
