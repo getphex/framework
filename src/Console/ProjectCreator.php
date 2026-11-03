@@ -5,7 +5,7 @@
  * package override.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */
@@ -83,7 +83,7 @@ final class ProjectCreator
                 }
                 $composer['repositories'] = [[
                     'type' => 'path', 'url' => $package,
-                    'options' => ['symlink' => false, 'versions' => ['getphex/phex' => '0.1.0']],
+                    'options' => ['symlink' => false, 'versions' => ['getphex/framework' => '0.1.0']],
                 ]];
                 $source = json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n";
                 if (file_put_contents($target.'/composer.json', $source) !== strlen($source)) {

@@ -4,7 +4,7 @@
  * Maps strict item columns into the database compatibility fixture's immutable DTO.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

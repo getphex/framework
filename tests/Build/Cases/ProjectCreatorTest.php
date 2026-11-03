@@ -5,7 +5,7 @@
  * of existing destinations.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */
@@ -31,7 +31,7 @@ final class ProjectCreatorTest extends TestCase
             $manifest = file_get_contents($path.'/composer.json');
             $this->assertIsString($manifest);
             $this->assertStringNotContainsString('repositories', $manifest);
-            $this->assertStringContainsString('"getphex/phex": "^0.1"', $manifest);
+            $this->assertStringContainsString('"getphex/framework": "^0.1"', $manifest);
             $this->assertFileExists($path.'/native/main.php');
             $this->assertFileExists($path.'/routes/web.php');
             $this->assertDirectoryDoesNotExist($path.'/var');
@@ -50,7 +50,7 @@ final class ProjectCreatorTest extends TestCase
             $this->assertIsString($manifest);
             $this->assertStringContainsString('"type": "path"', $manifest);
             $this->assertStringContainsString('"symlink": false', $manifest);
-            $this->assertStringContainsString('"getphex/phex": "0.1.0"', $manifest);
+            $this->assertStringContainsString('"getphex/framework": "0.1.0"', $manifest);
         } finally {
             self::remove($path);
         }

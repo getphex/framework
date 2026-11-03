@@ -4,7 +4,7 @@
  * Carries validated search pagination, filtering and sort options for the search action.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

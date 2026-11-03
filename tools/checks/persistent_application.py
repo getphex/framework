@@ -212,12 +212,12 @@ def main():
         check(binary.read_bytes() == snapshot, "Startup tuning recompiled the executable.")
         events.unlink()
         phpstan = project / 'phpstan.neon'
-        phpstan.write_text("parameters:\n    level: max\n    phpVersion: 80300\n    paths: [app, config, routes, native, var/generated]\n    scanFiles: [vendor/getphex/phex/src/Runtime/Elephc/analysis.stub]\n    bootstrapFiles: [vendor/autoload.php]\n    tmpDir: var/cache/phpstan\n    parallel:\n        maximumNumberOfProcesses: 1\n")
+        phpstan.write_text("parameters:\n    level: max\n    phpVersion: 80300\n    paths: [app, config, routes, native, var/generated]\n    scanFiles: [vendor/getphex/framework/src/Runtime/Elephc/analysis.stub]\n    bootstrapFiles: [vendor/autoload.php]\n    tmpDir: var/cache/phpstan\n    parallel:\n        maximumNumberOfProcesses: 1\n")
         run([str(ROOT / 'tools/phpstan/vendor/bin/phpstan'), 'analyse', '--configuration', str(phpstan), '--no-progress'], project)
         moved = directory / "relocated app's $"
         project.rename(moved)
         project = moved
-        installed = project / 'vendor/getphex/phex'
+        installed = project / 'vendor/getphex/framework'
         for path in ['src/Build', 'src/Runtime/Development', 'src/Console', 'stubs']:
             shutil.rmtree(installed / path)
         for path in ['config', 'routes', 'bootstrap', 'vendor/composer']:

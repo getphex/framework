@@ -4,7 +4,7 @@
  * Validates JSON user-creation input and returns the example's typed request DTO.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

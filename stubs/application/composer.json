@@ -1,10 +1,11 @@
 {
-    "name": "getphex/app",
-    "description": "An application built with Phex.",
+    "name": "getphex/phex",
+    "description": "The application skeleton for the Phex framework.",
     "type": "project",
+    "license": "MIT",
     "require": {
         "php": "^8.3",
-        "getphex/phex": "^0.1"
+        "getphex/framework": "^0.1"
     },
     "autoload": {
         "psr-4": {

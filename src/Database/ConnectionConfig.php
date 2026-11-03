@@ -4,7 +4,7 @@
  * Holds a validated DSN and optional credentials for runtime PDO connection creation.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

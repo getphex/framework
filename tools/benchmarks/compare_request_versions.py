@@ -140,7 +140,7 @@ def main():
         caddy, checksum = bench.download_caddy(workspace)
         metadata.update(caddy=subprocess.check_output([caddy, 'version'], text=True).strip(), caddy_archive_sha256=checksum)
         project = bench.install_project(workspace)
-        headers = project / 'vendor/getphex/phex/src/Http/Message/Headers.php'
+        headers = project / 'vendor/getphex/framework/src/Http/Message/Headers.php'
         server_config = project / 'config/server.php'
         original_config = server_config.read_text()
         definitions = {}

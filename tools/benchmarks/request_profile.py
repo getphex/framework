@@ -124,9 +124,9 @@ def variants(workspace, state, selected=None):
         'baseline_sha256': hashlib.sha256(base.read_bytes()).hexdigest(), 'patched_sha256': hashlib.sha256(image).hexdigest(),
         'limitation': 'Diagnostic only: returning zero skips native INI string identity semantics. Not a production fix.'}, indent=2)+'\n')
     state['cases']['native-no-string-registry'] = {'binary': str(patched)}
-    paths = [project / 'vendor/getphex/phex/src/Http/Message/Headers.php',
-             project / 'vendor/getphex/phex/src/Runtime/Http/BufferedResponseEmitter.php',
-             project / 'vendor/getphex/phex/src/Logging/JsonLogger.php',
+    paths = [project / 'vendor/getphex/framework/src/Http/Message/Headers.php',
+             project / 'vendor/getphex/framework/src/Runtime/Http/BufferedResponseEmitter.php',
+             project / 'vendor/getphex/framework/src/Logging/JsonLogger.php',
              project / 'var/generated/ApplicationContainer.php']
     original = {path: path.read_text() for path in paths}
     headers, emitter, logger, container = paths

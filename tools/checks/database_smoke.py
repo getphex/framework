@@ -30,7 +30,7 @@ def install_example(directory):
         text = path.read_text().replace('Phex\\\\Examples\\\\Database\\\\', 'App\\\\')
         text = text.replace('Phex\\Examples\\Database\\', 'App\\')
         text = text.replace('namespace Phex\\Examples\\Database;', 'namespace App;')
-        text = text.replace("__DIR__.'/../../../src/Database/bootstrap.php'", "__DIR__.'/../vendor/getphex/phex/src/Database/bootstrap.php'")
+        text = text.replace("__DIR__.'/../../../src/Database/bootstrap.php'", "__DIR__.'/../vendor/getphex/framework/src/Database/bootstrap.php'")
         text = text.replace("__DIR__.'/../../../vendor/autoload.php'", "__DIR__.'/../vendor/autoload.php'")
         text = text.replace("__DIR__.'/../../vendor/autoload.php'", "__DIR__.'/vendor/autoload.php'")
         path.write_text(text)

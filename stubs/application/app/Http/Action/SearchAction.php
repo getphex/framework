@@ -4,7 +4,7 @@
  * Decodes typed query options and returns their validated values as JSON.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

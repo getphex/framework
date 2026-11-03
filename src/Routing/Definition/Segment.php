@@ -4,7 +4,7 @@
  * Represents a literal or named parameter segment in a validated route pattern.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

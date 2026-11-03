@@ -4,7 +4,7 @@
  * Decodes a typed greeting request and returns the skeleton's JSON greeting response.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

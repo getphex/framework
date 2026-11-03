@@ -1,5 +1,5 @@
 {
-    "name": "getphex/phex",
+    "name": "getphex/framework",
     "description": "A PHP web framework designed for native ElephC compilation.",
     "type": "library",
     "license": "MIT",

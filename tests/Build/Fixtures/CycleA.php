@@ -4,7 +4,7 @@
  * Provides one side of a constructor dependency cycle rejected by the container analyzer.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

@@ -4,7 +4,7 @@
  * Maps strict database row columns into the CRUD example's immutable user DTO.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

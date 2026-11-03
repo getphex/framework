@@ -4,7 +4,7 @@
  * Defines a generic contract for decoding an input string into a typed application object.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

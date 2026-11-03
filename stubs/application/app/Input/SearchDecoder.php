@@ -4,7 +4,7 @@
  * Maps bounded query parameters into search options using application-configured defaults.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

@@ -4,7 +4,7 @@
  * Emits named-route URL generation with pre-encoded literals and direct parameter lookups.
  *
  * @package Phex
- * @link https://github.com/getphex/phex
+ * @link https://github.com/getphex/framework
  * @license MIT
  * @copyright Vincenzo Petrucci (Illegal Studio)
  */

@@ -33,10 +33,10 @@ def install_project(directory):
     run(["php", str(ROOT / "bin/phex"), "new", str(project)], ROOT)
     manifest = json.loads((project / "composer.json").read_text())
     check("repositories" not in manifest, "The default template depends on a local checkout.")
-    manifest["repositories"] = [{"type": "path", "url": str(package), "options": {"symlink": False, "versions": {"getphex/phex": "0.1.0"}}}, {"packagist.org": False}]
+    manifest["repositories"] = [{"type": "path", "url": str(package), "options": {"symlink": False, "versions": {"getphex/framework": "0.1.0"}}}, {"packagist.org": False}]
     (project / "composer.json").write_text(json.dumps(manifest, indent=4) + "\n")
     run(["composer", "install", "--no-interaction", "--prefer-dist", "--no-scripts", "--no-plugins"], project)
-    installed = project / "vendor/getphex/phex"
+    installed = project / "vendor/getphex/framework"
     check(installed.is_dir() and not installed.is_symlink(), "The framework was not independently mirrored.")
     shutil.rmtree(package)
     return project
@@ -211,7 +211,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="phex-application-") as temporary:
         directory = Path(temporary)
         project = install_project(directory)
-        installed = project / "vendor/getphex/phex"
+        installed = project / "vendor/getphex/framework"
         run(["php", "vendor/bin/phex", "--help"], project)
         local = directory / "local project"
         run(["php", "vendor/bin/phex", "new", str(local), "--local"], project)
@@ -277,7 +277,7 @@ def main():
         check(snapshots == {path.name: path.read_bytes() for path in generated.iterdir()}, "Invalid source discovery changed existing artifacts.")
         broken.unlink()
         phpstan = project / "phpstan.neon"
-        phpstan.write_text("parameters:\n    level: max\n    phpVersion: 80300\n    paths:\n        - app\n        - config\n        - routes\n        - bootstrap\n        - public\n        - native\n        - var/generated\n    scanFiles:\n        - vendor/getphex/phex/src/Runtime/Elephc/analysis.stub\n    bootstrapFiles:\n        - vendor/autoload.php\n    tmpDir: var/cache/phpstan\n    parallel:\n        maximumNumberOfProcesses: 1\n")
+        phpstan.write_text("parameters:\n    level: max\n    phpVersion: 80300\n    paths:\n        - app\n        - config\n        - routes\n        - bootstrap\n        - public\n        - native\n        - var/generated\n    scanFiles:\n        - vendor/getphex/framework/src/Runtime/Elephc/analysis.stub\n    bootstrapFiles:\n        - vendor/autoload.php\n    tmpDir: var/cache/phpstan\n    parallel:\n        maximumNumberOfProcesses: 1\n")
         run([str(ROOT / "tools/phpstan/vendor/bin/phpstan"), "analyse", "--configuration", str(phpstan), "--no-progress"], project)
         fake = directory / "compiler"
         fake.mkdir()
@@ -310,7 +310,7 @@ def main():
         del binary_snapshot
         print("One native executable verified with different runtime environments and invalid bootstrap configuration, without embedding build values.", flush=True)
 
-        installed = project / "vendor/getphex/phex"
+        installed = project / "vendor/getphex/framework"
         for relative in ("src/Build", "src/Runtime/Development", "src/Console", "src/Database", "src/Contracts/Database", "stubs"):
             shutil.rmtree(installed / relative)
         for relative in ("config", "routes", "bootstrap", "vendor/composer"):
