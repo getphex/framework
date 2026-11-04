@@ -12,6 +12,7 @@ create applications through Composer without cloning the framework.
 - [Change the application template](#change-the-application-template)
 - [Automatic publication](#automatic-publication)
 - [Release packages](#release-packages)
+- [Tag an application release](#tag-an-application-release)
 
 ## Repositories and package names
 
@@ -75,9 +76,11 @@ control and documentation.
 
 ## Release packages
 
-The split prepares the application repository; it does not register packages on
-Packagist, create version tags or change repository visibility. Until versioned
-packages are published, use the explicit local installation flow above.
+The split prepares the application repository. The separate release workflow
+described below can tag a verified application commit. Neither workflow registers
+packages on Packagist, creates framework tags or changes repository visibility.
+Until versioned packages are published, use the explicit local installation flow
+above.
 
 Once both packages are available, the intended application command is:
 
@@ -93,6 +96,58 @@ before documenting a package release as available.
 Updating `getphex/framework` in an existing application updates its dependency.
 Template files already copied into that application remain owned by the project;
 they are not replaced by framework updates.
+
+## Tag an application release
+
+Prerequisites: the release workflow must be available on the framework's `main`
+branch, the existing bot secrets must be configured, and your GitHub CLI account
+must be allowed to run workflows in `getphex/framework`. Run these commands from
+the **framework checkout**. The bot needs installation access and `contents: write`
+on `getphex/phex`; the workflow requests a token restricted to that repository and
+revokes it when the job finishes.
+
+First create the framework version tag through your normal release process. The
+tag must resolve to a commit in framework `main` history whose latest `Compatibility`
+run for a `main` push completed successfully on that exact SHA. A successful pull
+request or tag-only run does not satisfy this requirement. Wait for the automatic
+split to publish that commit's application tree before releasing the application.
+
+Choose the framework source tag and application version explicitly. They may have
+different versions, and a framework release does not automatically create an
+application version. Accepted names are `vX.Y.Z`, optionally followed by an `alpha`,
+`beta`, `rc` or `RC` suffix, such as `v0.1.0-rc.1`.
+
+For example, preview the first application release without creating its tag:
+
+```sh
+gh workflow run release.yml --repo getphex/framework --ref main \
+  -f framework_tag=v0.1.0 -f application_tag=v0.1.0 -f dry_run=true
+```
+
+Dispatch the same workflow to publish:
+
+```sh
+gh workflow run release.yml --repo getphex/framework --ref main \
+  -f framework_tag=v0.1.0 -f application_tag=v0.1.0
+```
+
+The `Release application skeleton` workflow checks the existing framework tag and
+CI, then searches the mirror's published `main` history for a commit whose root
+tree exactly equals `stubs/application/` at the tagged framework commit. It can
+select an older mirror commit after `main` advances, and reuse a commit when the
+template is unchanged. It fails if the expected tree has not been published.
+
+After checking the source tag, CI and mirror refs again, `phex-bot[bot]` creates a
+lightweight application tag at the selected mirror commit. The job summary shows
+both version names, commit SHAs, the matching tree and the compatibility run. An
+existing matching tag is a successful no-op; a conflicting tag is never moved or
+replaced. Release and split publication share a concurrency group. Dispatches
+outside framework `main` do not run the release job.
+
+The workflow creates the Git tag only. GitHub release notes, Packagist registration
+and public package availability are separate steps. Before announcing an
+installable version, confirm that the skeleton's framework dependency resolves
+on Packagist and test `composer create-project` without local repositories.
 
 ---
 

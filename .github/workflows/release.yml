@@ -1,0 +1,79 @@
+name: Release application skeleton
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release.yml'
+      - 'tools/releases/**'
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'tools/releases/**'
+  workflow_dispatch:
+    inputs:
+      framework_tag:
+        description: Existing framework version tag with passing main compatibility
+        required: true
+        type: string
+      application_tag:
+        description: Independent version tag to create in getphex/phex
+        required: true
+        type: string
+      dry_run:
+        description: Validate the release without creating a tag
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
+        with:
+          persist-credentials: false
+      - name: Verify release selection and immutable tag publication
+        run: python3 -B -m unittest discover -s tools/releases/tests -p 'test_*.py'
+
+  release:
+    needs: check
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    # Serialize with the existing mirror publisher, including across workflows.
+    concurrency:
+      group: application-split-main
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
+        with:
+          persist-credentials: false
+      - name: Mint a token restricted to the application mirror
+        id: bot
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.PHEX_BOT_APP_ID }}
+          private-key: ${{ secrets.PHEX_BOT_PRIVATE_KEY }}
+          owner: getphex
+          repositories: phex
+          permission-contents: write
+      - name: Verify the source and publish its application tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PHEX_MIRROR_TOKEN: ${{ steps.bot.outputs.token }}
+          FRAMEWORK_TAG: ${{ inputs.framework_tag }}
+          APPLICATION_TAG: ${{ inputs.application_tag }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args=(--framework-tag "$FRAMEWORK_TAG" --application-tag "$APPLICATION_TAG")
+          if [[ $DRY_RUN == false ]]; then
+            args+=(--publish)
+          fi
+          python3 -B tools/releases/application.py "${args[@]}"
