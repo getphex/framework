@@ -28,12 +28,22 @@ class RepositoryAPI:
         self.has_skeleton = True
         self.writes = []
         self.create_race = None
+        self.releases = {}
+        self.release_commands = []
 
     @staticmethod
     def commit(sha, tree):
         return {'sha': sha, 'commit': {'tree': {'sha': tree}}}
 
     def call(self, repository, endpoint, payload=None, missing=False):
+        if endpoint.startswith('releases/tags/'):
+            return self.releases.get((repository, endpoint.removeprefix('releases/tags/')))
+        if endpoint.startswith('releases?'):
+            page = int(endpoint.rsplit('=', 1)[1])
+            releases = [value for (repo, unused), value in self.releases.items() if repo == repository]
+            return releases[(page - 1) * 100:page * 100]
+        if endpoint == 'releases/generate-notes':
+            return {'body': '## Changes\n\nGenerated changelog.\n'}
         if payload is not None:
             self.writes.append((repository, endpoint, payload))
             tag = payload['ref'].removeprefix('refs/tags/')
@@ -69,6 +79,31 @@ class RepositoryAPI:
             page = int(endpoint.rsplit('=', 1)[1])
             return self.commits[(page - 1) * 100:page * 100]
         raise AssertionError((repository, endpoint, payload))
+
+    @staticmethod
+    def release_data(repository, tag, **overrides):
+        release = {'tag_name': tag, 'name': tag, 'body': 'Release notes.', 'draft': False,
+                   'prerelease': '-' in tag, 'published_at': '2026-11-04T16:00:00Z',
+                   'html_url': f'https://github.com/{repository}/releases/tag/{tag}',
+                   'zipball_url': f'https://api.github.com/repos/{repository}/zipball/{tag}',
+                   'tarball_url': f'https://api.github.com/repos/{repository}/tarball/{tag}'}
+        release.update(overrides)
+        return release
+
+    def command(self, repository, arguments, stdin=None):
+        self.release_commands.append((repository, arguments, stdin))
+        tag = arguments[2]
+        if arguments[1] == 'create':
+            release = self.release_data(repository, tag, body=stdin + '\nGenerated changelog.')
+        else:
+            release = dict(self.releases[(repository, tag)], draft=False,
+                           prerelease='--prerelease=true' in arguments)
+            if '--notes-file' in arguments:
+                release['body'] = stdin
+        if '--title' in arguments:
+            release['name'] = arguments[arguments.index('--title') + 1]
+        self.releases[(repository, tag)] = release
+        return release['html_url']
 
 
 class ReleaseTest(unittest.TestCase):

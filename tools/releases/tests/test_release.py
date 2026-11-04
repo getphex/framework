@@ -12,7 +12,8 @@ from unittest.mock import patch
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import release
-from application import APIError, APPLICATION, FRAMEWORK, GitHub, ReleaseError, resolve_tag
+from application import (APIError, APPLICATION, FRAMEWORK, GitHub, ReleaseError,
+                         ensure_github_release, resolve_tag)
 from test_application import RepositoryAPI
 
 
@@ -24,6 +25,8 @@ class PublishingAPI(RepositoryAPI):
         self.framework_race = None
 
     def call(self, repository, endpoint, payload=None, missing=False):
+        if endpoint.startswith('releases'):
+            return super().call(repository, endpoint, payload=payload, missing=missing)
         if endpoint.startswith('tags?'):
             names = self.remote_tags.get(repository, [name for repo, name in self.tags if repo == repository])
             page = int(endpoint.rsplit('=', 1)[1])
@@ -63,6 +66,7 @@ class ReleaseCommandTest(unittest.TestCase):
         self.api.tags[(APPLICATION, 'v0.1.0')] = {
             'type': 'commit', 'sha': self.api.commits[0]['sha'],
         }
+        ensure_github_release(self.api, APPLICATION, 'v0.1.0', self.api.commits[0]['sha'])
         return 'https://github.com/getphex/framework/actions/runs/123'
 
     def run_main(self, arguments, answers=()):
@@ -176,10 +180,41 @@ class ReleaseCommandTest(unittest.TestCase):
         self.api.tags[(APPLICATION, 'v0.1.0')] = {
             'type': 'commit', 'sha': self.api.commits[0]['sha'],
         }
+        ensure_github_release(self.api, FRAMEWORK, 'v0.1.0', self.api.source)
+        ensure_github_release(self.api, APPLICATION, 'v0.1.0', self.api.commits[0]['sha'])
+        writes = len(self.api.release_commands)
         with patch('release.checkout', return_value=self.api.source), patch('release.command') as dispatch:
             release.execute(self.api, Path('.'), self.plan())
         self.assertEqual(2, len(self.api.writes))
+        self.assertEqual(writes, len(self.api.release_commands))
         dispatch.assert_not_called()
+
+    def test_existing_tags_without_release_pages_are_completed_by_the_workflow(self):
+        release.publish_framework(self.api, 'v0.1.0', self.api.source)
+        self.api.tags[(APPLICATION, 'v0.1.0')] = {
+            'type': 'commit', 'sha': self.api.commits[0]['sha'],
+        }
+        with patch('release.checkout', return_value=self.api.source), \
+             patch('release.command', side_effect=self.dispatch) as dispatch, \
+             patch('release.subprocess.run', return_value=subprocess.CompletedProcess([], 0)):
+            release.execute(self.api, Path('.'), self.plan())
+        self.assertEqual(1, dispatch.call_count)
+        self.assertEqual(2, len(self.api.writes))
+        self.assertEqual({FRAMEWORK, APPLICATION}, {item[0] for item in self.api.release_commands})
+
+    def test_an_existing_version_can_be_completed_after_main_advances(self):
+        release.publish_framework(self.api, 'v0.1.0', self.api.source)
+        self.api.main = 'f' * 40
+        with patch('release.checkout', return_value=self.api.main):
+            plan = release.preflight(self.api, Path('.'), 'v0.1.0', 'v0.1.0')
+        self.assertEqual(self.api.source, plan.source)
+        self.assertNotEqual(self.api.main, plan.source)
+
+    def test_an_existing_version_outside_successful_main_history_is_rejected(self):
+        self.api.tags[(FRAMEWORK, 'v0.1.0')] = {'type': 'commit', 'sha': '0' * 40}
+        with self.assertRaisesRegex(ReleaseError, 'must belong to main history'):
+            self.plan()
+        self.assertEqual([], self.api.writes)
 
     def test_framework_tag_conflict_and_create_races_never_overwrite_refs(self):
         self.api.tags[(FRAMEWORK, 'v0.1.0')] = {'type': 'commit', 'sha': '0' * 40}

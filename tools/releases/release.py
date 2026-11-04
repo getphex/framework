@@ -1,4 +1,4 @@
-"""Interactively publish framework and optional application version tags with make release."""
+"""Publish complete framework and optional application GitHub Releases with make release."""
 
 import argparse
 from dataclasses import dataclass, field
@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 from application import (APIError, APPLICATION, FRAMEWORK, GitHub, ReleaseError, VERSION,
+                         complete_github_release, ensure_github_release, github_release,
                          prepare, require_compatibility, resolve_tag, select_application)
 
 
@@ -74,11 +75,13 @@ class Plan:
 
 
 def preflight(api, root, framework_tag, application_tag):
-    source = checkout(api, root)
-    compatibility = require_compatibility(api, source)
+    head = checkout(api, root)
     existing = resolve_tag(api, FRAMEWORK, framework_tag, missing=True)
-    if existing is not None and existing[1] != source:
-        raise ReleaseError('The framework version already targets another commit; it will not move.')
+    source = head if existing is None else existing[1]
+    compatibility = require_compatibility(api, source)
+    github_release(api, FRAMEWORK, framework_tag)
+    if application_tag is not None:
+        github_release(api, APPLICATION, application_tag)
     application = None if application_tag is None else select_application(api, source, application_tag)
     return Plan(source, framework_tag, None if existing is None else existing[0],
                 application_tag, application, compatibility)
@@ -111,11 +114,13 @@ def execute(api, root, plan):
     if preflight(api, root, plan.framework_tag, plan.application_tag) != plan:
         raise ReleaseError('Release inputs changed after confirmation; run make release again.')
     created = publish_framework(api, plan.framework_tag, plan.source)
-    print(f'Framework {plan.framework_tag}: {"published" if created else "already published"}.', flush=True)
+    framework_url = ensure_github_release(api, FRAMEWORK, plan.framework_tag, plan.source, plan.compatibility)
+    print(f'Framework {plan.framework_tag}: {"tag created; " if created else ""}{framework_url}', flush=True)
     if plan.application_tag is None:
         return
-    if plan.application['existing_ref'] is not None:
-        print(f'Application {plan.application_tag}: already published.')
+    application_release = github_release(api, APPLICATION, plan.application_tag)
+    if complete_github_release(application_release, plan.application_tag):
+        print(f'Application {plan.application_tag}: {application_release["html_url"]}')
         return
     output = command(['gh', 'workflow', 'run', 'release.yml', '--repo', FRAMEWORK, '--ref', 'main',
                       '-f', f'framework_tag={plan.framework_tag}',
@@ -131,9 +136,12 @@ def execute(api, root, plan):
     if result.returncode:
         raise ReleaseError(f'Application publication did not complete successfully: {run[0]}')
     released = prepare(api, plan.framework_tag, plan.application_tag)
-    if released.existing_ref is None or released.mirror != plan.application['mirror']:
+    application_release = github_release(api, APPLICATION, plan.application_tag)
+    if (released.existing_ref is None or released.mirror != plan.application['mirror']
+            or not complete_github_release(application_release, plan.application_tag)):
         raise ReleaseError('The completed workflow did not publish the confirmed application commit.')
-    print(f'Application {plan.application_tag}: verified at {released.mirror}.')
+    print(f'Application {plan.application_tag}: verified at {released.mirror}.\n'
+          f'{application_release["html_url"]}')
 
 
 def main():

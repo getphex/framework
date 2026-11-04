@@ -1,4 +1,4 @@
-"""Tag a published application tree from an independently versioned framework tag."""
+"""Publish application versions and shared GitHub Release metadata for verified tags."""
 
 import argparse
 from dataclasses import asdict, dataclass
@@ -30,17 +30,28 @@ class GitHub:
     def __init__(self, source_token=None, mirror_token=None):
         self.tokens = {FRAMEWORK: source_token, APPLICATION: mirror_token}
 
+    def environment(self, repository):
+        environment = dict(os.environ)
+        if self.tokens[repository] is not None:
+            environment['GH_TOKEN'] = self.tokens[repository]
+        return environment
+
+    def command(self, repository, arguments, stdin=None):
+        result = subprocess.run(['gh', *arguments, '--repo', f'github.com/{repository}'],
+                                input=stdin, capture_output=True, text=True,
+                                env=self.environment(repository), timeout=60)
+        if result.returncode:
+            raise ReleaseError(result.stderr.strip() or 'GitHub release command failed.')
+        return result.stdout.strip()
+
     def call(self, repository, endpoint, payload=None, missing=False):
         method = 'GET' if payload is None else 'POST'
         command = ['gh', 'api', '--hostname', 'github.com', '--include', '--method', method,
                    f'repos/{repository}/{endpoint}']
         if payload is not None:
             command += ['--input', '-']
-        environment = dict(os.environ)
-        if self.tokens[repository] is not None:
-            environment['GH_TOKEN'] = self.tokens[repository]
         result = subprocess.run(command, input=None if payload is None else json.dumps(payload),
-                                capture_output=True, text=True, env=environment, timeout=60)
+                                capture_output=True, text=True, env=self.environment(repository), timeout=60)
         headers, separator, body = result.stdout.partition('\n\n')
         match = re.match(r'HTTP/\S+ ([0-9]{3})\b', headers)
         status = int(match[1]) if match else None
@@ -80,6 +91,102 @@ def resolve_tag(api, repository, tag, missing=False):
     if target['type'] != 'commit':
         raise ReleaseError(f'{repository} tag {tag} must resolve to a commit.')
     return original, target['sha']
+
+
+def github_release(api, repository, tag):
+    def checked(release):
+        if release['tag_name'] != tag or (not release['draft'] and release['prerelease'] != ('-' in tag)):
+            raise ReleaseError('Existing GitHub Release has conflicting version or prerelease metadata.')
+        return release
+
+    release = api.call(repository, f'releases/tags/{tag}', missing=True)
+    if release is not None:
+        return checked(release)
+    # The tag endpoint may omit drafts. Writers can still find them in the list.
+    page = 1
+    while True:
+        releases = api.call(repository, f'releases?per_page=100&page={page}')
+        if not releases:
+            return None
+        for release in releases:
+            if release['tag_name'] == tag:
+                return checked(release)
+        page += 1
+
+
+def complete_github_release(release, tag):
+    return bool(release and release['tag_name'] == tag and not release['draft']
+                and release['prerelease'] == ('-' in tag) and release.get('published_at')
+                and (release.get('name') or '').strip() and (release.get('body') or '').strip()
+                and release.get('html_url') and release.get('zipball_url') and release.get('tarball_url'))
+
+
+def release_notes(repository, tag, source, compatibility_url=None):
+    number = tag.removeprefix('v')
+    if repository == FRAMEWORK:
+        introduction = ('Phex is a PHP web framework designed for native ElephC compilation.\n\n'
+                        '- Typed HTTP routing, middleware and request lifecycles.\n'
+                        '- Explicit service definitions and generated dependency containers.\n'
+                        '- Build-free PHP development, generated PHP and native deployment.\n'
+                        '- Optional persistent native workers with separate request state.\n')
+        install = f'composer require "getphex/framework:{number}"'
+    else:
+        introduction = ('The Phex application skeleton, published from `stubs/application/` '
+                        'in the framework monorepo.\n\n'
+                        'Includes application bootstrap, typed service and route configuration, '
+                        'PHP development serving and native build commands.\n')
+        level = tag.split('-', 1)[1].split('.')[0].lower() if '-' in tag else None
+        stability = '' if level is None else ' --stability=' + ('RC' if level == 'rc' else level)
+        install = f'composer create-project getphex/phex my-app {number}{stability}\ncd my-app\ncomposer serve'
+    notes = (f'{introduction}\n## Installation\n\nRequires PHP 8.3 or newer.\n\n'
+             f'```sh\n{install}\n```\n\n'
+             '[Documentation](https://github.com/getphex/framework/tree/main/docs)\n\n'
+             f'Verified source: [{source[:7]}](https://github.com/{repository}/commit/{source}).\n')
+    if compatibility_url:
+        notes += f'\n[PHP and ElephC compatibility checks]({compatibility_url}).\n'
+    return notes
+
+
+def ensure_github_release(api, repository, tag, source, compatibility_url=None):
+    """Complete a release without changing tags or replacing existing human notes."""
+    if not VERSION.fullmatch(tag) or resolve_tag(api, repository, tag)[1] != source:
+        raise ReleaseError('GitHub Release requires the verified existing version tag.')
+    current = github_release(api, repository, tag)
+    prerelease = '-' in tag
+    if complete_github_release(current, tag):
+        return current['html_url']
+    notes = release_notes(repository, tag, source, compatibility_url)
+    title = f'Phex {"framework" if repository == FRAMEWORK else "application"} {tag}'
+    if current is None:
+        arguments = ['release', 'create', tag, '--verify-tag', '--generate-notes',
+                     '--title', title, '--notes-file', '-']
+        if prerelease:
+            arguments += ['--prerelease', '--latest=false']
+    else:
+        arguments = ['release', 'edit', tag, '--draft=false', f'--prerelease={str(prerelease).lower()}']
+        if prerelease:
+            arguments += ['--latest=false']
+        if not (current.get('name') or '').strip():
+            arguments += ['--title', title]
+        if not (current.get('body') or '').strip():
+            generated = api.call(repository, 'releases/generate-notes', payload={'tag_name': tag})
+            notes += '\n' + generated['body']
+            arguments += ['--notes-file', '-']
+        else:
+            notes = None
+    # The tag must still resolve to the selected commit immediately before publishing.
+    if resolve_tag(api, repository, tag)[1] != source:
+        raise ReleaseError('Version tag changed before GitHub Release publication.')
+    try:
+        api.command(repository, arguments, stdin=notes)
+    except ReleaseError:
+        # A concurrent publisher may have completed the same release.
+        if not complete_github_release(github_release(api, repository, tag), tag):
+            raise
+    published = github_release(api, repository, tag)
+    if resolve_tag(api, repository, tag)[1] != source or not complete_github_release(published, tag):
+        raise ReleaseError('GitHub Release publication verification failed.')
+    return published['html_url']
 
 
 def require_compatibility(api, source):
@@ -182,7 +289,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--framework-tag', required=True)
     parser.add_argument('--application-tag', required=True)
-    parser.add_argument('--publish', action='store_true', help='Create the tag; otherwise only validate.')
+    parser.add_argument('--publish', action='store_true',
+                        help='Publish the tag and GitHub Release; otherwise only validate.')
     options = parser.parse_args()
     source_token = os.environ.get('GH_TOKEN', '')
     mirror_token = os.environ.get('PHEX_MIRROR_TOKEN', source_token)
@@ -192,10 +300,12 @@ def main():
         api = GitHub(source_token, mirror_token)
         release = prepare(api, options.framework_tag, options.application_tag)
         created = publish(api, release) if options.publish else False
+        published = ensure_github_release(api, APPLICATION, release.application_tag, release.mirror,
+                                          release.compatibility_url) if options.publish else None
     except (ReleaseError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as error:
         print(f'Application release failed: {error}', file=sys.stderr)
         return 1
-    result = dict(asdict(release), created=created, dry_run=not options.publish)
+    result = dict(asdict(release), created=created, github_release=published, dry_run=not options.publish)
     print(json.dumps(result, indent=2))
     summary = os.environ.get('GITHUB_STEP_SUMMARY')
     if summary:
@@ -205,7 +315,8 @@ def main():
                          f'- Application: `{APPLICATION}@{release.application_tag}` (`{release.mirror}`)\n'
                          f'- Exact skeleton tree: `{release.tree}`\n'
                          f'- Compatibility: {release.compatibility_url}\n'
-                         f'- Dry run: `{not options.publish}`; created: `{created}`\n')
+                         f'- Dry run: `{not options.publish}`; tag created: `{created}`\n'
+                         f'- GitHub Release: {published or "dry run"}\n')
     return 0
 
 

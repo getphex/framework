@@ -19,11 +19,11 @@ on:
         required: true
         type: string
       application_tag:
-        description: Independent version tag to create in getphex/phex
+        description: Independent application version to publish as a GitHub Release
         required: true
         type: string
       dry_run:
-        description: Validate the release without creating a tag
+        description: Validate without publishing tags or GitHub Releases
         default: false
         type: boolean
 
@@ -68,7 +68,7 @@ jobs:
           owner: getphex
           repositories: phex
           permission-contents: write
-      - name: Verify the source and publish its application tag
+      - name: Verify the source and publish its application GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           PHEX_MIRROR_TOKEN: ${{ steps.bot.outputs.token }}

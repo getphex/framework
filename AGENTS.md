@@ -54,6 +54,10 @@ The same template is documented in [Contributing](docs/contributing.md#php-file-
   when changing their distribution.
 - Follow [Package distribution](docs/distribution.md) when editing the split
   workflow or preparing a release.
+- `make release` must publish complete GitHub Releases with notes for the
+  framework and any selected application version. Tags alone are insufficient.
+  Reuse verified tags, preserve authored notes on retries, and never move an
+  existing release tag.
 
 ## ElephC in CI
 

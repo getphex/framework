@@ -13,7 +13,7 @@ create applications through Composer without cloning the framework.
 - [Automatic publication](#automatic-publication)
 - [Release packages](#release-packages)
 - [Publish with make release](#publish-with-make-release)
-- [Tag an application release](#tag-an-application-release)
+- [Publish an application release](#publish-an-application-release)
 
 ## Repositories and package names
 
@@ -77,9 +77,11 @@ control and documentation.
 
 ## Release packages
 
-The split prepares the application repository. The separate release workflow
-described below can tag a verified application commit. Neither workflow registers
-packages on Packagist, creates framework tags or changes repository visibility.
+The split prepares the application repository. `make release` publishes a GitHub
+Release for the framework and dispatches the separate bot workflow to publish the
+selected application version. Both GitHub Releases include notes and GitHub's ZIP
+and tar source archives. Packagist registration and repository visibility remain
+separate setup steps.
 Until versioned packages are published, use the explicit local installation flow
 above.
 
@@ -118,12 +120,16 @@ accepted, along with the prerelease suffixes described below.
 Before asking for confirmation, the command requires successful latest
 exact-commit `main` push compatibility and an already-published matching skeleton
 tree. If CI is running or the split is pending, wait for completion and retry.
-Dirty, unpublished or outdated checkouts and conflicting version tags are rejected.
+Dirty, unpublished or outdated checkouts and conflicting version metadata are
+rejected.
 The summary shows the versions, source/mirror commits, exact tree and CI link.
 
-After confirmation, it checks the inputs again and creates an annotated framework
-tag on GitHub. If an application release was selected, it dispatches the existing
-`phex-bot` workflow, waits for that run and verifies the resulting application tag.
+After confirmation, it checks the inputs again, creates an annotated framework tag
+when needed, and publishes the framework's GitHub Release. Notes include package
+details, installation instructions, the verified commit and CI link, followed by
+GitHub's generated changelog. If an application release was selected, it dispatches
+the existing `phex-bot` workflow, waits for that run and verifies the application tag
+and published GitHub Release, including its notes and source archive links.
 The command uses your existing `gh` authentication; bot credentials stay in Actions
 secrets. No local ElephC compiler or package build is required. `composer.json`
 does not need a hardcoded `version` field.
@@ -134,7 +140,8 @@ To select versions explicitly while keeping the confirmation prompt:
 make release VERSION=0.1.0 APPLICATION_VERSION=0.1.0
 ```
 
-To validate the same release without creating tags or dispatching a workflow:
+To validate the same release without creating tags, GitHub Releases or workflow
+dispatches:
 
 ```sh
 make release VERSION=0.1.0 APPLICATION_VERSION=0.1.0 DRY_RUN=1
@@ -145,16 +152,24 @@ help. The lower-level Python command also supports `--yes` for automation with
 explicit framework and application versions (or `--skip-application`).
 
 If framework publication succeeds but application publication fails, the framework
-tag stays published. Correct the reported problem and retry with the **same explicit
-versions** using the command printed by the error. Matching published tags are
-successful no-ops; existing conflicting tags are never replaced. This also avoids
-accepting a newly proposed patch version when resuming an interrupted release.
+tag and GitHub Release stay published. Correct the reported problem and retry with
+the **same explicit versions** using the command printed by the error. An existing framework version
+is resolved from its tag, even after `main` advances, and still needs successful
+exact-commit CI and membership in `main` history. Complete published releases are
+successful no-ops; existing tags are never replaced. A version that has only a tag
+gets its missing GitHub Release. Drafts are published, preserving authored titles,
+notes and existing assets; empty notes are generated before publication. This also
+avoids accepting a newly proposed patch version when resuming an interrupted release.
+
+Prerelease tags publish GitHub prereleases and are not marked Latest. A published
+release whose prerelease classification conflicts with its tag is rejected for
+review rather than silently reclassified.
 
 After the tags are indexed on Packagist, verify an independent
-`composer create-project getphex/phex my-app` installation. Creating GitHub release
-notes and managing Packagist registration or hooks remain separate operations.
+`composer create-project getphex/phex my-app` installation. Managing Packagist
+registration or hooks remains a separate operation.
 
-## Tag an application release
+## Publish an application release
 
 Prerequisites: the release workflow must be available on the framework's `main`
 branch, the existing bot secrets must be configured, and your GitHub CLI account
@@ -196,15 +211,17 @@ select an older mirror commit after `main` advances, and reuse a commit when the
 template is unchanged. It fails if the expected tree has not been published.
 
 After checking the source tag, CI and mirror refs again, `phex-bot[bot]` creates a
-lightweight application tag at the selected mirror commit. The job summary shows
-both version names, commit SHAs, the matching tree and the compatibility run. An
-existing matching tag is a successful no-op; a conflicting tag is never moved or
-replaced. Release and split publication share a concurrency group. Dispatches
-outside framework `main` do not run the release job.
+lightweight application tag at the selected mirror commit when needed, then
+publishes the corresponding GitHub Release with package notes and a generated
+changelog. The job summary shows both version names, commit SHAs, the matching
+tree, the compatibility run and the GitHub Release URL. Existing matching tags
+are reused, and missing release pages or drafts are completed. A conflicting tag
+is never moved or replaced. Release and split publication share a concurrency
+group. Dispatches outside framework `main` do not run the release job.
 
-The workflow creates the Git tag only. GitHub release notes, Packagist registration
-and public package availability are separate steps. Before announcing an
-installable version, confirm that the skeleton's framework dependency resolves
+The workflow publishes the application Git tag and full GitHub Release. It does
+not create a framework version or register packages on Packagist. Before announcing
+an installable version, confirm that the skeleton's framework dependency resolves
 on Packagist and test `composer create-project` without local repositories.
 
 ---
