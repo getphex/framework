@@ -12,6 +12,7 @@ create applications through Composer without cloning the framework.
 - [Change the application template](#change-the-application-template)
 - [Automatic publication](#automatic-publication)
 - [Release packages](#release-packages)
+- [Publish with make release](#publish-with-make-release)
 - [Tag an application release](#tag-an-application-release)
 
 ## Repositories and package names
@@ -97,6 +98,62 @@ Updating `getphex/framework` in an existing application updates its dependency.
 Template files already copied into that application remain owned by the project;
 they are not replaced by framework updates.
 
+## Publish with make release
+
+Prerequisites: Git, GNU Make, Python 3.10 or newer, and an authenticated GitHub CLI
+account with permission to publish framework tags, read the application mirror and
+dispatch workflows. Run this command from the **framework checkout**, on a clean
+`main` whose `HEAD` equals GitHub `main`:
+
+```sh
+make release
+```
+
+The command reads version tags from GitHub and proposes the next patch version,
+starting with `v0.1.0` when no stable version exists. Accept or edit the framework
+version, then choose the application version independently. Enter `-` for the
+application version to release only the framework. Both `0.1.0` and `v0.1.0` are
+accepted, along with the prerelease suffixes described below.
+
+Before asking for confirmation, the command requires successful latest
+exact-commit `main` push compatibility and an already-published matching skeleton
+tree. If CI is running or the split is pending, wait for completion and retry.
+Dirty, unpublished or outdated checkouts and conflicting version tags are rejected.
+The summary shows the versions, source/mirror commits, exact tree and CI link.
+
+After confirmation, it checks the inputs again and creates an annotated framework
+tag on GitHub. If an application release was selected, it dispatches the existing
+`phex-bot` workflow, waits for that run and verifies the resulting application tag.
+The command uses your existing `gh` authentication; bot credentials stay in Actions
+secrets. No local ElephC compiler or package build is required. `composer.json`
+does not need a hardcoded `version` field.
+
+To select versions explicitly while keeping the confirmation prompt:
+
+```sh
+make release VERSION=0.1.0 APPLICATION_VERSION=0.1.0
+```
+
+To validate the same release without creating tags or dispatching a workflow:
+
+```sh
+make release VERSION=0.1.0 APPLICATION_VERSION=0.1.0 DRY_RUN=1
+```
+
+Use `APPLICATION_VERSION=-` for a framework-only release. Bare `make` displays
+help. The lower-level Python command also supports `--yes` for automation with
+explicit framework and application versions (or `--skip-application`).
+
+If framework publication succeeds but application publication fails, the framework
+tag stays published. Correct the reported problem and retry with the **same explicit
+versions** using the command printed by the error. Matching published tags are
+successful no-ops; existing conflicting tags are never replaced. This also avoids
+accepting a newly proposed patch version when resuming an interrupted release.
+
+After the tags are indexed on Packagist, verify an independent
+`composer create-project getphex/phex my-app` installation. Creating GitHub release
+notes and managing Packagist registration or hooks remain separate operations.
+
 ## Tag an application release
 
 Prerequisites: the release workflow must be available on the framework's `main`
@@ -106,7 +163,8 @@ the **framework checkout**. The bot needs installation access and `contents: wri
 on `getphex/phex`; the workflow requests a token restricted to that repository and
 revokes it when the job finishes.
 
-First create the framework version tag through your normal release process. The
+Use this lower-level workflow when the framework tag already exists, for example
+after a framework-only release with `make release`. The
 tag must resolve to a commit in framework `main` history whose latest `Compatibility`
 run for a `main` push completed successfully on that exact SHA. A successful pull
 request or tag-only run does not satisfy this requirement. Wait for the automatic

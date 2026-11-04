@@ -27,7 +27,7 @@ class APIError(ReleaseError):
 
 
 class GitHub:
-    def __init__(self, source_token, mirror_token):
+    def __init__(self, source_token=None, mirror_token=None):
         self.tokens = {FRAMEWORK: source_token, APPLICATION: mirror_token}
 
     def call(self, repository, endpoint, payload=None, missing=False):
@@ -36,7 +36,9 @@ class GitHub:
                    f'repos/{repository}/{endpoint}']
         if payload is not None:
             command += ['--input', '-']
-        environment = dict(os.environ, GH_TOKEN=self.tokens[repository])
+        environment = dict(os.environ)
+        if self.tokens[repository] is not None:
+            environment['GH_TOKEN'] = self.tokens[repository]
         result = subprocess.run(command, input=None if payload is None else json.dumps(payload),
                                 capture_output=True, text=True, env=environment, timeout=60)
         headers, separator, body = result.stdout.partition('\n\n')
@@ -94,16 +96,13 @@ def require_compatibility(api, source):
     if (latest['head_sha'] != source or latest['head_branch'] != 'main'
             or latest['event'] != 'push' or latest['head_repository']['full_name'] != FRAMEWORK
             or latest['status'] != 'completed' or latest['conclusion'] != 'success'):
-        raise ReleaseError('The latest exact-commit main push Compatibility run must pass.')
+        raise ReleaseError('The latest exact-commit main push Compatibility run must pass: '
+                           f'{latest["html_url"]} ({latest["status"]}/{latest["conclusion"]}).')
     return latest['html_url']
 
 
-def prepare(api, framework_tag, application_tag):
-    for tag in (framework_tag, application_tag):
-        if not VERSION.fullmatch(tag):
-            raise ReleaseError('Use version tags such as v0.1.0 or v0.1.0-rc.1.')
-    source_ref, source = resolve_tag(api, FRAMEWORK, framework_tag)
-    compatibility = require_compatibility(api, source)
+def select_application(api, source, application_tag):
+    """Select a published tree before a new framework tag needs to be created."""
     root = api.call(FRAMEWORK, f'git/commits/{source}')['tree']['sha']
     listing = api.call(FRAMEWORK, f'git/trees/{root}?recursive=1')
     if listing['truncated']:
@@ -124,8 +123,8 @@ def prepare(api, framework_tag, application_tag):
             if existing is not None and commit['sha'] != existing[1]:
                 continue
             if commit['commit']['tree']['sha'] == tree:
-                return Release(framework_tag, application_tag, source_ref, source, tree, head,
-                               commit['sha'], None if existing is None else existing[0], compatibility)
+                return dict(tree=tree, mirror_head=head, mirror=commit['sha'],
+                            existing_ref=None if existing is None else existing[0])
             if existing is not None:
                 raise ReleaseError('The existing application tag has a different tree; it will not move.')
         page += 1
@@ -133,6 +132,16 @@ def prepare(api, framework_tag, application_tag):
         raise ReleaseError('The existing application tag is outside published main history.')
     raise ReleaseError('No published mirror commit matches the tagged skeleton. Wait for the split, '
                        'or release a framework commit whose skeleton was published.')
+
+
+def prepare(api, framework_tag, application_tag):
+    for tag in (framework_tag, application_tag):
+        if not VERSION.fullmatch(tag):
+            raise ReleaseError('Use version tags such as v0.1.0 or v0.1.0-rc.1.')
+    source_ref, source = resolve_tag(api, FRAMEWORK, framework_tag)
+    compatibility = require_compatibility(api, source)
+    return Release(framework_tag, application_tag, source_ref, source,
+                   compatibility_url=compatibility, **select_application(api, source, application_tag))
 
 
 def publish(api, release):
