@@ -3,7 +3,7 @@
 [Documentation](README.md)
 
 Phex develops the framework and its application template together. The template
-is published automatically to a separate repository so developers can eventually
+is published automatically to a separate repository so developers can
 create applications through Composer without cloning the framework.
 
 ## On this page
@@ -81,11 +81,9 @@ The split prepares the application repository. `make release` publishes a GitHub
 Release for the framework and dispatches the separate bot workflow to publish the
 selected application version. Both GitHub Releases include notes and GitHub's ZIP
 and tar source archives. Packagist registration and repository visibility remain
-separate setup steps.
-Until versioned packages are published, use the explicit local installation flow
-above.
+separate setup steps. Both packages are registered on Packagist.
 
-Once both packages are available, the intended application command is:
+Create an application from the published packages with:
 
 ```sh
 composer create-project getphex/phex my-app

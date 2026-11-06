@@ -73,19 +73,18 @@ files and bzip2 development library. See [Installation](docs/installation.md).
 
 ## Create an application
 
-From a framework checkout, before a versioned package release:
+From the directory where you keep your projects:
 
 ```sh
-composer install --no-dev
-php bin/phex new ../my-app --local
-cd ../my-app
-composer install
+composer create-project getphex/phex my-app
+cd my-app
 composer serve
 ```
 
 Open **http://127.0.0.1:3130/** for `{"hello":"world"}`. Development PHP needs no
-build artifacts. `--local` adds an explicit mirrored Composer path dependency
-on this checkout. Continue with the [Quickstart](docs/quickstart.md).
+build artifacts. For framework development, use the
+[local-checkout installation](docs/installation.md#create-an-application-from-this-checkout).
+Continue with the [Quickstart](docs/quickstart.md).
 
 ## Build PHP or native output
 
@@ -96,9 +95,10 @@ composer build
 php -S 127.0.0.1:3130 -t public public/compiled.php
 ```
 
-For native execution:
+For native execution, with [elvm](https://github.com/getelephc/elvm) configured:
 
 ```sh
+elvm install
 composer build:native
 ./var/build/start --listen 127.0.0.1:3131 --workers 1
 ```

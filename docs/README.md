@@ -2,7 +2,7 @@
 
 Build a typed web application on PHP, then compile the same shared sources with ElephC. Phex provides explicit dependency injection, immutable buffered HTTP messages, precompilable routing and separate application/request ownership.
 
-This handbook describes the current development checkout. Start on PHP with no generated artifacts, then choose generated PHP or native execution when you need a build. Package creation currently uses the explicit local-checkout installation flow.
+Start with `composer create-project getphex/phex my-app` and develop on PHP with no generated artifacts, then choose generated PHP or native execution when you need a build. The installation guide also covers local framework checkouts. These guides follow the current sources; when using a released version, select its matching Git tag for documentation.
 
 ## Start here
 
@@ -57,7 +57,7 @@ This handbook describes the current development checkout. Start on PHP with no g
 
 ## Read examples in context
 
-Application guides use the project created by `phex new`. A page that runs the repository's `examples/` or `composer check` says **framework checkout** explicitly. Code fragments belong in the file or method named beside them; the quickstart provides complete files.
+Application guides use the same skeleton installed by `composer create-project` or copied by `phex new`. A page that runs the repository's `examples/` or `composer check` says **framework checkout** explicitly. Code fragments belong in the file or method named beside them; the quickstart provides complete files.
 
 The current web API is buffered. The database module uses explicit SQL/DTO mapping and has SQLite compatibility coverage. Streaming, an ORM/migration system and a persistent PHP host adapter are outside the current documented feature set.
 

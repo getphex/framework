@@ -7,6 +7,7 @@ Phex applications run directly on PHP and can be compiled into a native HTTP ser
 ## On this page
 
 - [Requirements](#requirements)
+- [Create an application with Composer](#create-an-application-with-composer)
 - [Create an application from this checkout](#create-an-application-from-this-checkout)
 - [Run the included endpoints](#run-the-included-endpoints)
 - [Generated PHP and native builds](#generated-php-and-native-builds)
@@ -23,14 +24,26 @@ Phex applications run directly on PHP and can be compiled into a native HTTP ser
 
 On Debian or Ubuntu, native builds need `libbz2-dev` in addition to the usual native build tools. ElephC 0.27.6 supports the default request lifecycle. Retained application lifecycle requires a compiler with `--web-lifecycle` support; see [Native servers](native.md#compiler-requirements).
 
+## Create an application with Composer
+
+From the directory where you keep your projects:
+
+```sh
+composer create-project getphex/phex my-app
+cd my-app
+composer serve
+```
+
+Composer installs the application skeleton and its `getphex/framework` dependency
+from Packagist. Open **http://127.0.0.1:3130/** for `{"hello":"world"}`.
+No ElephC installation or build is required for PHP development. Continue with
+[Run the included endpoints](#run-the-included-endpoints).
+
 ## Create an application from this checkout
 
-Phex is in development and does not yet have a package release. The framework
-package is `getphex/framework`; the `getphex/phex` application repository is an
-automatic split of its template. See [Package distribution](distribution.md).
-
-The supported starting point is a framework checkout with an explicit local
-Composer dependency:
+Use a local framework checkout when developing the framework or trying template
+changes before publication. The `getphex/phex` application repository is an
+automatic split of `stubs/application/`; see [Package distribution](distribution.md).
 
 ```sh
 # Start outside the framework repository.
