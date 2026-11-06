@@ -43,7 +43,7 @@ composer install
 composer serve
 ```
 
-Open **http://127.0.0.1:8080/**. The response is:
+Open **http://127.0.0.1:3130/**. The response is:
 
 ```json
 {"hello":"world"}
@@ -58,9 +58,9 @@ Open **http://127.0.0.1:8080/**. The response is:
 From another terminal:
 
 ```sh
-curl -i http://127.0.0.1:8080/greet \
+curl -i http://127.0.0.1:3130/greet \
   -H 'Content-Type: application/json' --data '{"name":"Ada"}'
-curl 'http://127.0.0.1:8080/search?page=2&limit=10&active=true&sort=desc'
+curl 'http://127.0.0.1:3130/search?page=2&limit=10&active=true&sort=desc'
 ```
 
 The greeting returns `{"hello":"Ada"}`. The search returns validated options:
@@ -77,17 +77,20 @@ Inside **your application**, generated PHP is available explicitly:
 
 ```sh
 composer build
-php -S 127.0.0.1:8080 -t public public/compiled.php
+php -S 127.0.0.1:3130 -t public public/compiled.php
 ```
 
 For native execution, with ElephC available:
 
 ```sh
 composer build:native
-./var/build/start --listen 127.0.0.1:8080 --workers 1
+./var/build/start --listen 127.0.0.1:3131 --workers 1
 ```
 
-Stop the development server before starting another process on the same address. Both commands serve the application's existing endpoints. [Builds](builds.md) explains when artifacts must be regenerated.
+PHP uses http://127.0.0.1:3130/ and the native launcher defaults to
+http://127.0.0.1:3131/, so both can run at the same time. Both serve the
+application's existing endpoints. [Builds](builds.md) explains when artifacts
+must be regenerated.
 
 ## Next steps
 

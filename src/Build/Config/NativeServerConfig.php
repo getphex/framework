@@ -21,7 +21,7 @@ final readonly class NativeServerConfig
 {
     public function __construct(
         public NativeLifecycle $lifecycle = NativeLifecycle::Request,
-        public string $listen = '127.0.0.1:8080',
+        public string $listen = '127.0.0.1:3131',
         public int $workers = 4,
         public int $maxRequests = 1000,
     ) {

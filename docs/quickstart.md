@@ -118,8 +118,8 @@ new EndpointRoute(
 With `composer serve` running:
 
 ```sh
-curl http://127.0.0.1:8080/hello/Ada
-curl http://127.0.0.1:8080/hello/Ada%20Lovelace
+curl http://127.0.0.1:3130/hello/Ada
+curl http://127.0.0.1:3130/hello/Ada%20Lovelace
 ```
 
 The first request returns:
@@ -142,15 +142,18 @@ Stop the PHP development server, then run:
 
 ```sh
 composer build
-php -S 127.0.0.1:8080 -t public public/compiled.php
+php -S 127.0.0.1:3130 -t public public/compiled.php
 ```
 
 The same requests now pass through the generated container and matcher. To compile a native server instead:
 
 ```sh
 composer build:native
-./var/build/start --listen 127.0.0.1:8080 --workers 1
+./var/build/start --listen 127.0.0.1:3131 --workers 1
 ```
+
+Send native requests to http://127.0.0.1:3131/hello/Ada. The PHP target remains
+on port `3130`.
 
 The service, endpoint, route and response code stay the same. Rebuild generated artifacts after changes to bindings, route definitions or declaration structure. Native source changes require recompilation.
 

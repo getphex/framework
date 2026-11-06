@@ -14,7 +14,7 @@
         }
     },
     "scripts": {
-        "serve": "@php -S 127.0.0.1:8080 -t public public/index.php",
+        "serve": "@php -S 127.0.0.1:3130 -t public public/index.php",
         "serve:native": "var/build/start",
         "build": "phex build config/build.php",
         "build:native": "phex compile config/build.php"

@@ -31,10 +31,10 @@ Run inside a created application:
 
 | Command | Effect |
 | --- | --- |
-| `composer serve` | PHP development server on `127.0.0.1:8080`, no build required |
+| `composer serve` | PHP development server on `127.0.0.1:3130`, no build required |
 | `composer build` | Generate container, bootstraps and launcher |
 | `composer build:native` | Generate and compile the selected native lifecycle |
-| `composer serve:native` | Start the previously built native launcher |
+| `composer serve:native` | Start the previously built native launcher on `127.0.0.1:3131` by default |
 
 The underlying installed commands are:
 

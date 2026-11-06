@@ -17,7 +17,7 @@ Phex decodes JSON through explicit application DTOs and encodes explicit array p
 With your application's PHP server running:
 
 ```sh
-curl -i http://127.0.0.1:8080/greet \
+curl -i http://127.0.0.1:3130/greet \
   -H 'Content-Type: application/json' --data '{"name":"Ada"}'
 ```
 

@@ -31,13 +31,13 @@ php examples/database/init.php
 ## Start development PHP
 
 ```sh
-php -S 127.0.0.1:8080 -t examples/database/public examples/database/public/index.php
+php -S 127.0.0.1:3130 -t examples/database/public examples/database/public/index.php
 ```
 
 From another terminal:
 
 ```sh
-curl -i http://127.0.0.1:8080/users \
+curl -i http://127.0.0.1:3130/users \
   -H 'Content-Type: application/json' --data '{"name":"Ada"}'
 ```
 
@@ -52,11 +52,11 @@ IDs depend on existing data. Use the returned location for subsequent requests.
 ## Read, update and delete
 
 ```sh
-curl http://127.0.0.1:8080/users
-curl http://127.0.0.1:8080/users/1
-curl -X PUT http://127.0.0.1:8080/users/1 \
+curl http://127.0.0.1:3130/users
+curl http://127.0.0.1:3130/users/1
+curl -X PUT http://127.0.0.1:3130/users/1 \
   -H 'Content-Type: application/json' --data '{"name":"Grace"}'
-curl -i -X DELETE http://127.0.0.1:8080/users/1
+curl -i -X DELETE http://127.0.0.1:3130/users/1
 ```
 
 | Operation | Result |
@@ -75,19 +75,22 @@ Stop the development server, then run in the terminal containing the exported DS
 
 ```sh
 php bin/phex build examples/database/config/build.php
-php -S 127.0.0.1:8080 -t examples/database/public examples/database/public/compiled.php
+php -S 127.0.0.1:3130 -t examples/database/public examples/database/public/compiled.php
 ```
 
 Use the same curl commands. The repository, SQL, mapper and endpoint code are unchanged.
 
 ## Compile a native server
 
-With a complete ElephC SDK available, stop PHP and run:
+With a complete ElephC SDK available, run:
 
 ```sh
 php bin/phex compile examples/database/config/build.php
-examples/database/var/build/start --listen 127.0.0.1:8080 --workers 1
+examples/database/var/build/start --listen 127.0.0.1:3131 --workers 1
 ```
+
+Use http://127.0.0.1:3131/ for native requests. It can run alongside the
+PHP server on port `3130`.
 
 The runtime DSN still selects the SQLite file. To select another compiler, set `PHEX_ELEPHC` for the compile command. [Native servers](native.md) describes application-lifecycle capability and deployment artifacts.
 

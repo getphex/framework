@@ -83,7 +83,7 @@ composer install
 composer serve
 ```
 
-Open **http://127.0.0.1:8080/** for `{"hello":"world"}`. Development PHP needs no
+Open **http://127.0.0.1:3130/** for `{"hello":"world"}`. Development PHP needs no
 build artifacts. `--local` adds an explicit mirrored Composer path dependency
 on this checkout. Continue with the [Quickstart](docs/quickstart.md).
 
@@ -93,15 +93,18 @@ Inside the created application:
 
 ```sh
 composer build
-php -S 127.0.0.1:8080 -t public public/compiled.php
+php -S 127.0.0.1:3130 -t public public/compiled.php
 ```
 
-For native execution, after stopping the PHP server:
+For native execution:
 
 ```sh
 composer build:native
-./var/build/start --listen 127.0.0.1:8080 --workers 1
+./var/build/start --listen 127.0.0.1:3131 --workers 1
 ```
+
+Native HTTP uses **http://127.0.0.1:3131/** by default, so it can run alongside
+PHP on port `3130`.
 
 [Builds](docs/builds.md) explains regeneration. [PHP deployment](docs/deployment.md)
 and [Native servers](docs/native.md) describe runtime configuration and artifacts.

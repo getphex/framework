@@ -27,8 +27,8 @@ Keep application source and generated artifacts together. The framework's instal
 For a local check of that front controller:
 
 ```sh
-php -S 127.0.0.1:8080 -t public public/compiled.php
-curl http://127.0.0.1:8080/
+php -S 127.0.0.1:3130 -t public public/compiled.php
+curl http://127.0.0.1:3130/
 ```
 
 PHP's built-in server is a development/checking tool. Configure your production web server and PHP-FPM for serving the deployed application.

@@ -46,7 +46,7 @@ use Phex\Build\Config\NativeServerConfig;
 
 return new NativeServerConfig(
     lifecycle: NativeLifecycle::Application,
-    listen: '127.0.0.1:8080',
+    listen: '127.0.0.1:3131',
     workers: 4,
     maxRequests: 1000,
 );
@@ -60,19 +60,22 @@ Phex checks application-lifecycle capability during compilation and reports an u
 
 ```sh
 composer build:native
-./var/build/start --listen 127.0.0.1:8080 --workers 1
+./var/build/start --listen 127.0.0.1:3131 --workers 1
 ```
 
 The compile command generates `var/build/server.php`, invokes ElephC and writes `server.lifecycle` only after success. The wrapper includes `native/main.php` for request lifecycle or `native/application.php` for application lifecycle.
 
 The executable serves HTTP directly. A reverse proxy is an optional deployment layer; account for that extra hop when [comparing performance](benchmarks.md).
 
+The default native address is **http://127.0.0.1:3131/**. PHP development and
+generated PHP examples use port `3130`, so the two targets can run together.
+
 ## Startup options
 
 The launcher applies explicit arguments first, then environment values, then defaults from server configuration:
 
 ```sh
-PHEX_LISTEN=0.0.0.0:8080 PHEX_WORKERS=8 ./var/build/start
+PHEX_LISTEN=0.0.0.0:3131 PHEX_WORKERS=8 ./var/build/start
 ./var/build/start --workers 2 --max-requests 500 -- --access-log
 ```
 
@@ -89,6 +92,13 @@ Worker-local memory is independent. Eight workers have eight containers and, for
 ## Deploy the artifact
 
 Deploy `server`, `server.lifecycle` and `start` together for launcher startup. The launcher requires a POSIX shell and `dirname`; the executable can also be started directly with its native options. Runtime HTTP execution needs no PHP or Composer.
+
+The Phex launcher applies the configured address and port. When starting the
+executable directly, pass the address explicitly to keep the same endpoint:
+
+```sh
+./var/build/server --listen 127.0.0.1:3131 --workers 1
+```
 
 Keep the platform/architecture and system dependency requirements of the SDK in mind, and supply runtime environment values, database files and other application data separately. A native binary is not a universal cross-platform package.
 

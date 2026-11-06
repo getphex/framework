@@ -17,7 +17,7 @@ use Phex\Build\Config\NativeServerConfig;
 
 return new NativeServerConfig(
     lifecycle: NativeLifecycle::Request,
-    listen: '127.0.0.1:8080',
+    listen: '127.0.0.1:3131',
     workers: 4,
     maxRequests: 1000,
 );
