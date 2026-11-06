@@ -45,17 +45,26 @@ contains the complete regeneration matrix.
 
 ## Compile native HTTP
 
+The project pins ElephC `0.27.7` in `.elephc-version`. With
+[elvm](https://github.com/getelephc/elvm) installed and its `elephc` shim on
+`PATH`, run these commands from this application directory:
+
 ```sh
+elvm install
 composer build:native
 ./var/build/start --listen 127.0.0.1:3131 --workers 1
 ```
+
+`elvm install` downloads the pinned release SDK without changing your global
+selection. Commit `.elephc-version` when changing the project's compiler version.
+PHP development does not require ElephC or elvm.
 
 Native HTTP uses http://127.0.0.1:3131/ by default and can run alongside PHP on
 port `3130`. Stop an existing server before reusing its port.
 `config/server.php` chooses Request lifecycle by default. Application lifecycle
 retains one container per
-worker and needs an SDK with `--web-lifecycle` support. Select a compiler through
-`PHEX_ELEPHC`.
+worker and needs an SDK with `--web-lifecycle` support. Set `PHEX_ELEPHC` to an
+explicit compiler path to override the normal `PATH` selection.
 
 The [native server guide](https://github.com/getphex/framework/blob/main/docs/native.md)
 explains lifecycle, startup overrides, artifacts and tested runtime limitations.

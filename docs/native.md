@@ -7,6 +7,7 @@ ElephC compiles the same shared application sources into a native HTTP executabl
 ## On this page
 
 - [Compiler requirements](#compiler-requirements)
+- [Project compiler version](#project-compiler-version)
 - [Choose a lifecycle](#choose-a-lifecycle)
 - [Build and start](#build-and-start)
 - [Startup options](#startup-options)
@@ -30,11 +31,37 @@ elephc --print-capabilities
 
 Use the compiler together with its required runtime bridge archives. An executable copied without its SDK archives may type-check code but fail at linking. Database applications need the PDO bridge. The supported capability command is `--print-capabilities`.
 
-Select an SDK for a build without changing the global compiler selection:
+## Project compiler version
+
+The application skeleton includes `.elephc-version`, pinned to `0.27.7`. With
+[elvm](https://github.com/getelephc/elvm) installed and its `elephc` shim on
+`PATH`, run the following from **your application directory**:
+
+```sh
+elvm install
+elvm current
+elephc --version
+```
+
+`elvm install` downloads the pinned release SDK. The version reported by
+`elvm current` and `elephc --version` should be `0.27.7`. Selection through the
+project file leaves the global compiler default unchanged. PHP development
+does not require elvm or an installed compiler.
+
+Phex invokes `elephc` from the application root, so the elvm shim reads this
+project pin during `composer build:native`. To change it, run `elvm use VERSION`,
+then `elvm install`, and commit the updated `.elephc-version`.
+
+The file is interpreted by elvm. A directly installed compiler on `PATH` does
+not read it. elvm's `ELEPHC_VERSION` environment variable takes precedence over
+the project file. To select an explicit SDK for a Phex build, use:
 
 ```sh
 PHEX_ELEPHC=/absolute/path/to/elephc composer build:native
 ```
+
+An explicit `PHEX_ELEPHC` path bypasses the shim when it points directly to an
+SDK executable.
 
 ## Choose a lifecycle
 

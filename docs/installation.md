@@ -80,12 +80,19 @@ composer build
 php -S 127.0.0.1:3130 -t public public/compiled.php
 ```
 
-For native execution, with ElephC available:
+For native execution, with [elvm](https://github.com/getelephc/elvm) and its
+`elephc` shim on `PATH`, install the SDK pinned in the application's
+`.elephc-version`:
 
 ```sh
+elvm install
 composer build:native
 ./var/build/start --listen 127.0.0.1:3131 --workers 1
 ```
+
+The skeleton pins ElephC `0.27.7`. See
+[Project compiler version](native.md#project-compiler-version) for selection
+rules and explicit SDK overrides.
 
 PHP uses http://127.0.0.1:3130/ and the native launcher defaults to
 http://127.0.0.1:3131/, so both can run at the same time. Both serve the
